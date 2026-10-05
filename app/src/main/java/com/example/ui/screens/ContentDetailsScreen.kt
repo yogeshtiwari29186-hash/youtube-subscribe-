@@ -1,6 +1,9 @@
 package com.example.ui.screens
 
 import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -96,7 +99,6 @@ fun ContentDetailsScreen(
     val context = LocalContext.current
     var previewSecondsLeft by remember(promo?.promotionId) { mutableStateOf(40) }
     var previewFinished by remember(promo?.promotionId) { mutableStateOf(false) }
-    var awaitingYouTubeReturn by remember(promo?.promotionId) { mutableStateOf(false) }
     var verifyingSubscription by remember(promo?.promotionId) { mutableStateOf(false) }
     var pendingYouTubeAccessToken by remember(promo?.promotionId) { mutableStateOf<String?>(null) }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
