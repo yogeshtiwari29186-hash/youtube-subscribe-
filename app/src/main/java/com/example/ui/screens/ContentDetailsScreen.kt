@@ -44,6 +44,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -59,6 +60,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import kotlinx.coroutines.delay
 import com.example.data.model.PromotionType
 import com.example.ui.components.ComplianceNoticeCard
 import com.example.ui.components.CreatorTopBar
@@ -85,6 +87,20 @@ fun ContentDetailsScreen(
 ) {
     val promo = viewModel.selectedPromotion.collectAsState().value
     val context = LocalContext.current
+    var previewSecondsLeft by remember(promo?.promotionId) { mutableStateOf(40) }
+    var previewFinished by remember(promo?.promotionId) { mutableStateOf(false) }
+
+    LaunchedEffect(promo?.promotionId) {
+        if (promo?.type == PromotionType.YOUTUBE_VIDEO) {
+            previewSecondsLeft = 40
+            previewFinished = false
+            repeat(40) {
+                delay(1000)
+                previewSecondsLeft = (40 - it - 1).coerceAtLeast(0)
+            }
+            previewFinished = true
+        }
+    }
 
     Column(
         modifier = modifier
@@ -288,6 +304,27 @@ fun ContentDetailsScreen(
                             color = TextSecondary,
                             lineHeight = 22.sp
                         )
+                    }
+                }
+            }
+
+            // 40-second preview state + official YouTube action
+            if (promo.type == PromotionType.YOUTUBE_VIDEO) {
+                item {
+                    GlassCard(modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = if (previewFinished) "Preview complete" else "Preview in progress",
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = if (previewFinished) "You can continue watching on YouTube." else "40-second preview timer: ${previewSecondsLeft}s",
+                                color = TextSecondary,
+                                fontSize = 13.sp
+                            )
+                        }
                     }
                 }
             }
