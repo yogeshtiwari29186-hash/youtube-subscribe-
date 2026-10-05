@@ -1,6 +1,8 @@
 package com.example.data.repository
 
+import com.example.auth.FirebaseUserData
 import com.example.data.local.AppDatabase
+import com.example.data.remote.FirebaseCloudSync
 import com.example.data.model.AppNotification
 import com.example.data.model.AuditLog
 import com.example.data.model.DiamondTransaction
@@ -291,6 +293,28 @@ class CreatorDiamondRepository(
         )
 
         return@withContext OperationResult.Success(reward)
+    }
+
+    suspend fun useFirebaseUser(account: FirebaseUserData): OperationResult<Unit> = withContext(Dispatchers.IO) {
+        _currentUserId.value = account.uid
+        val existing = userDao.getUserSync(account.uid)
+        val user = existing?.copy(
+            username = account.name.ifBlank { existing.username },
+            email = account.email,
+            profileImage = account.photoUrl,
+            updatedAt = System.currentTimeMillis()
+        ) ?: UserAccount(
+            userId = account.uid,
+            username = account.name.ifBlank { account.email.substringBefore("@").ifBlank { "Creator" } },
+            email = account.email,
+            profileImage = account.photoUrl,
+            diamonds = 0L,
+            creatorEnabled = true,
+            isProfileComplete = false
+        )
+        userDao.insertUser(user)
+        FirebaseCloudSync.saveUser(user)
+        OperationResult.Success(Unit)
     }
 
     suspend fun updateProfile(
