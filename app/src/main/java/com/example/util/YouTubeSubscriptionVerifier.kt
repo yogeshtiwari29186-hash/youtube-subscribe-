@@ -21,31 +21,44 @@ object YouTubeSubscriptionVerifier {
                 .build()
         )
 
-    suspend fun isSubscribed(accessToken: String, targetVideoId: String? = null, targetChannelId: String? = null): Boolean =
-        withContext(Dispatchers.IO) {
-            val channelId = targetChannelId?.let { resolveChannelId(accessToken, it) } ?: targetVideoId?.let { resolveVideoChannelId(accessToken, it) }
-                ?: return@withContext false
+    suspend fun isSubscribed(
+        accessToken: String,
+        targetVideoId: String? = null,
+        targetChannelId: String? = null
+    ): Boolean = withContext(Dispatchers.IO) {
+        val channelId = targetChannelId?.let { resolveChannelId(accessToken, it) }
+            ?: targetVideoId?.let { resolveVideoChannelId(accessToken, it) }
+            ?: return@withContext false
 
-            val encoded = java.net.URLEncoder.encode(channelId, "UTF-8")
-            val url = "https://www.googleapis.com/youtube/v3/subscriptions?part=snippet&mine=true&forChannelId=$encoded&maxResults=1"
-            val request = Request.Builder().url(url).header("Authorization", "Bearer $accessToken").build()
+        val encoded = java.net.URLEncoder.encode(channelId, "UTF-8")
+        val url = "https://www.googleapis.com/youtube/v3/subscriptions?part=snippet&mine=true&forChannelId=$encoded&maxResults=1"
+        val request = Request.Builder()
+            .url(url)
+            .header("Authorization", "Bearer $accessToken")
+            .build()
 
-            client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return@withContext false
-                JSONObject(response.body?.string().orEmpty()).optInt("totalResults", 0) > 0
-            }
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) return@withContext false
+            JSONObject(response.body?.string().orEmpty()).optInt("totalResults", 0) > 0
         }
+    }
 
     private fun resolveChannelId(accessToken: String, value: String): String? {
         if (value.startsWith("UC")) return value
+
         val handle = value.removePrefix("@")
         val encoded = java.net.URLEncoder.encode("@$handle", "UTF-8")
         val url = "https://www.googleapis.com/youtube/v3/channels?part=id&forHandle=$encoded"
-        val request = Request.Builder().url(url).header("Authorization", "Bearer $accessToken").build()
-        client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) return null
-            val items = JSONObject(response.body?.string().orEmpty()).optJSONArray("items") ?: return null
-            if (items.length() == 0) return null
+        val request = Request.Builder()
+            .url(url)
+            .header("Authorization", "Bearer $accessToken")
+            .build()
+
+        return client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) return@use null
+            val items = JSONObject(response.body?.string().orEmpty()).optJSONArray("items")
+                ?: return@use null
+            if (items.length() == 0) return@use null
             JSONObject(items.getJSONObject(0)).optString("id").takeIf { it.isNotBlank() }
         }
     }
@@ -53,13 +66,19 @@ object YouTubeSubscriptionVerifier {
     private fun resolveVideoChannelId(accessToken: String, videoId: String): String? {
         val encoded = java.net.URLEncoder.encode(videoId, "UTF-8")
         val url = "https://www.googleapis.com/youtube/v3/videos?part=snippet&id=$encoded"
-        val request = Request.Builder().url(url).header("Authorization", "Bearer $accessToken").build()
+        val request = Request.Builder()
+            .url(url)
+            .header("Authorization", "Bearer $accessToken")
+            .build()
 
-        client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) return null
-            val items = JSONObject(response.body?.string().orEmpty()).optJSONArray("items") ?: return null
-            if (items.length() == 0) return null
-            JSONObject(items.getJSONObject(0).getString("snippet")).optString("channelId").takeIf { it.isNotBlank() }
+        return client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) return@use null
+            val items = JSONObject(response.body?.string().orEmpty()).optJSONArray("items")
+                ?: return@use null
+            if (items.length() == 0) return@use null
+
+            val snippet = items.getJSONObject(0).optJSONObject("snippet") ?: return@use null
+            snippet.optString("channelId").takeIf { it.isNotBlank() }
         }
     }
 }
