@@ -252,7 +252,7 @@ fun LoginScreen(
         Spacer(modifier = Modifier.height(60.dp))
         Icon(Icons.Filled.Security, contentDescription = null, tint = DiamondCyan, modifier = Modifier.size(56.dp))
         Spacer(modifier = Modifier.height(20.dp))
-        Text("Login / Create Account", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+        Text("Login", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             "Sign in with your real Google account. Your Firebase ID is created automatically on first login.",
@@ -281,7 +281,7 @@ fun LoginScreen(
             colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color(0xFF202124)),
             shape = RoundedCornerShape(12.dp)
         ) {
-            Text(if (authLoading) "Signing in..." else "Continue with Google", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            Text(if (authLoading) "Signing in..." else "Login with Google", fontWeight = FontWeight.Bold, fontSize = 15.sp)
         }
         Spacer(modifier = Modifier.height(14.dp))
         Text("No demo account • No guest login", color = TextMuted, fontSize = 12.sp)
@@ -314,7 +314,7 @@ fun RegisterScreen(
         Spacer(modifier = Modifier.height(12.dp))
         Text("Create Your Account", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
         Spacer(modifier = Modifier.height(8.dp))
-        Text("Google creates your unique Firebase user ID. You are both Viewer + Creator.", color = TextSecondary, fontSize = 14.sp, lineHeight = 21.sp)
+        Text("Enter your name, then continue with Google. A unique Firebase account is created for you.", color = TextSecondary, fontSize = 14.sp, lineHeight = 21.sp)
         Spacer(modifier = Modifier.height(24.dp))
         Button(
             onClick = {
