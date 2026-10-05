@@ -35,6 +35,8 @@ import kotlinx.coroutines.launch
 sealed class Screen(val route: String) {
     object Splash : Screen("splash")
     object Onboarding : Screen("onboarding")
+    object ChannelSetup : Screen("channel_setup")
+    object QuickVideoPromotion : Screen("quick_video_promotion")
     object Login : Screen("login")
     object Register : Screen("register")
     object ForgotPassword : Screen("forgot_password")
@@ -123,7 +125,7 @@ class CreatorDiamondViewModel(
     private fun finishAuth(account: FirebaseUserData, message:String){
         viewModelScope.launch{
             when(val op=repository.useFirebaseUser(account)){
-                is OperationResult.Success->{_authLoading.value=false;_uiEvents.emit(message);navigateTo(Screen.Home)}
+                is OperationResult.Success->{_authLoading.value=false;_uiEvents.emit(message);navigateTo(if (currentUser.value?.isProfileComplete == true) Screen.Home else Screen.ChannelSetup)}
                 is OperationResult.Error->{_authLoading.value=false;_uiEvents.emit(op.message)}
             }
         }
@@ -406,6 +408,44 @@ class CreatorDiamondViewModel(
                 is OperationResult.Error -> {
                     _uiEvents.emit(result.message)
                 }
+            }
+        }
+    }
+
+    fun confirmChannelSetup(channelName: String, channelUrl: String, channelId: String, thumbnailUrl: String) {
+        viewModelScope.launch {
+            when (val result = repository.confirmChannelSetup(channelName, channelUrl, channelId, thumbnailUrl)) {
+                is OperationResult.Success -> {
+                    _uiEvents.emit("Channel connected successfully! +200 💎 welcome balance ready.")
+                    navigateTo(Screen.QuickVideoPromotion)
+                }
+                is OperationResult.Error -> _uiEvents.emit(result.message)
+            }
+        }
+    }
+
+    fun createQuickVideoPromotion(videoUrl: String) {
+        val parsed = YouTubeUtils.parseVideoUrl(videoUrl)
+        if (parsed == null) {
+            viewModelScope.launch { _uiEvents.emit("Invalid YouTube video link.") }
+            return
+        }
+        viewModelScope.launch {
+            when (val result = repository.createPromotion(
+                title = "YouTube Video",
+                type = PromotionType.YOUTUBE_VIDEO,
+                targetUrl = parsed.canonicalUrl,
+                targetId = parsed.videoId,
+                description = "Promoted YouTube video",
+                thumbnailUrl = parsed.thumbnailUrl,
+                budget = 100L,
+                durationDays = 1
+            )) {
+                is OperationResult.Success -> {
+                    _uiEvents.emit("Video promotion created for 100 💎.")
+                    navigateTo(Screen.Home)
+                }
+                is OperationResult.Error -> _uiEvents.emit(result.message)
             }
         }
     }
