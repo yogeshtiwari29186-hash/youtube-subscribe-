@@ -348,6 +348,10 @@ class CreatorDiamondRepository(
         OperationResult.Success(Unit)
     }
 
+    suspend fun isCurrentUserProfileComplete(): Boolean = withContext(Dispatchers.IO) {
+        userDao.getUserSync(_currentUserId.value)?.isProfileComplete == true
+    }
+
     suspend fun confirmChannelSetup(
         channelName: String,
         channelUrl: String,
