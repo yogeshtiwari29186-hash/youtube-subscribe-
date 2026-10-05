@@ -25,7 +25,7 @@ import com.example.data.model.UserAccount
         ReportItem::class,
         AuditLog::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
