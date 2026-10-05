@@ -35,6 +35,7 @@ object FirebaseCloudSync {
             "budget" to promo.budget, "remainingBudget" to promo.remainingBudget,
             "durationDays" to promo.durationDays, "status" to promo.status.name,
             "impressions" to promo.impressions, "clicks" to promo.clicks,
+            "topListedUntil" to promo.topListedUntil,
             "createdAt" to promo.createdAt, "expiresAt" to promo.expiresAt
         ))
     }
