@@ -50,7 +50,7 @@ class CreatorDiamondRepository(
     private val reportDao = database.reportDao()
     private val auditDao = database.auditDao()
 
-    private val _currentUserId = MutableStateFlow("user_main_creator")
+    private val _currentUserId = MutableStateFlow("")
     val currentUserId: StateFlow<String> = _currentUserId.asStateFlow()
 
     private val _economySettings = MutableStateFlow(EconomySettings())
@@ -158,6 +158,7 @@ class CreatorDiamondRepository(
         }
 
         val promotionId = "promo_${UUID.randomUUID().toString().take(8)}"
+        val effectiveDurationDays = (budget / _economySettings.value.costPerDayPer100Reach).coerceAtLeast(1L).toInt()
         val newBalance = user.diamonds - budget
 
         // 1. Atomic balance update
@@ -190,7 +191,7 @@ class CreatorDiamondRepository(
             thumbnailUrl = thumbnailUrl,
             budget = budget,
             remainingBudget = budget,
-            durationDays = durationDays,
+            durationDays = effectiveDurationDays,
             status = PromotionStatus.ACTIVE,
             impressions = 0,
             clicks = 0,
@@ -298,22 +299,52 @@ class CreatorDiamondRepository(
     suspend fun useFirebaseUser(account: FirebaseUserData): OperationResult<Unit> = withContext(Dispatchers.IO) {
         _currentUserId.value = account.uid
         val existing = userDao.getUserSync(account.uid)
-        val user = existing?.copy(
-            username = account.name.ifBlank { existing.username },
-            email = account.email,
-            profileImage = account.photoUrl,
-            updatedAt = System.currentTimeMillis()
-        ) ?: UserAccount(
+        if (existing != null) {
+            val user = existing.copy(
+                username = account.name.ifBlank { existing.username },
+                email = account.email,
+                profileImage = account.photoUrl,
+                updatedAt = System.currentTimeMillis()
+            )
+            userDao.insertUser(user)
+            FirebaseCloudSync.saveUser(user)
+            return@withContext OperationResult.Success(Unit)
+        }
+
+        val welcomeDiamonds = 50L
+        val user = UserAccount(
             userId = account.uid,
             username = account.name.ifBlank { account.email.substringBefore("@").ifBlank { "Creator" } },
             email = account.email,
             profileImage = account.photoUrl,
-            diamonds = 0L,
+            diamonds = welcomeDiamonds,
             creatorEnabled = true,
             isProfileComplete = false
         )
         userDao.insertUser(user)
+
+        val welcomeTx = DiamondTransaction(
+            transactionId = "tx_${UUID.randomUUID().toString().take(8)}",
+            userId = user.userId,
+            amount = welcomeDiamonds,
+            type = TransactionType.BONUS,
+            reason = "First login welcome bonus",
+            timestamp = System.currentTimeMillis(),
+            relatedId = "first_login_50"
+        )
+        transactionDao.insertTransaction(welcomeTx)
+        val welcomeNotification = AppNotification(
+            notificationId = "notif_${UUID.randomUUID().toString().take(8)}",
+            userId = user.userId,
+            title = "Welcome! 🎉",
+            message = "Your new account received 50 💎 free Diamonds.",
+            type = NotificationType.DIAMOND_EARNED,
+            timestamp = System.currentTimeMillis()
+        )
+        notificationDao.insertNotification(welcomeNotification)
         FirebaseCloudSync.saveUser(user)
+        FirebaseCloudSync.saveTransaction(welcomeTx)
+        FirebaseCloudSync.saveNotification(welcomeNotification)
         OperationResult.Success(Unit)
     }
 
@@ -394,6 +425,50 @@ class CreatorDiamondRepository(
         FirebaseCloudSync.recordSubscription(user, promotion)
         transactionDao.getTransactions(user.userId).firstOrNull()?.lastOrNull()?.let(FirebaseCloudSync::saveTransaction)
         OperationResult.Success(reward)
+    }
+
+    suspend fun promoteToTopList(promotionId: String): OperationResult<Unit> = withContext(Dispatchers.IO) {
+        val user = userDao.getUserSync(_currentUserId.value)
+            ?: return@withContext OperationResult.Error("Please log in first.")
+        val promotion = promotionDao.getPromotionByIdSync(promotionId)
+            ?: return@withContext OperationResult.Error("Promotion not found.")
+        if (promotion.creatorId != user.userId) {
+            return@withContext OperationResult.Error("You can only top-list your own promotion.")
+        }
+
+        val cost = _economySettings.value.topListDailyCost
+        if (user.diamonds < cost) {
+            return@withContext OperationResult.Error("Top List needs $cost 💎 for 24 hours. You have ${user.diamonds} 💎.")
+        }
+
+        val now = System.currentTimeMillis()
+        val until = now + 24L * 60L * 60L * 1000L
+        userDao.updateDiamonds(user.userId, user.diamonds - cost)
+        promotionDao.updateTopListedUntil(promotionId, until)
+
+        val tx = DiamondTransaction(
+            transactionId = "tx_${UUID.randomUUID().toString().take(8)}",
+            userId = user.userId,
+            amount = -cost,
+            type = TransactionType.SPENT,
+            reason = "Daily Top List: ${promotion.title}",
+            timestamp = now,
+            relatedId = "toplist:$promotionId"
+        )
+        transactionDao.insertTransaction(tx)
+        val note = AppNotification(
+            notificationId = "notif_${UUID.randomUUID().toString().take(8)}",
+            userId = user.userId,
+            title = "Top List Activated 🔥",
+            message = "${promotion.title} is promoted to the Top List for 24 hours for $cost 💎.",
+            type = NotificationType.DIAMOND_SPENT,
+            timestamp = now
+        )
+        notificationDao.insertNotification(note)
+        FirebaseCloudSync.saveUser(user.copy(diamonds = user.diamonds - cost))
+        FirebaseCloudSync.saveTransaction(tx)
+        FirebaseCloudSync.saveNotification(note)
+        OperationResult.Success(Unit)
     }
 
     suspend fun submitReport(
