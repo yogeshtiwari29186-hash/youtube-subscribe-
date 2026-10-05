@@ -130,7 +130,7 @@ fun CreatorDiamondApp(
                 .background(DarkBackground)
         ) {
             when (currentScreen) {
-                Screen.Splash -> SplashScreen(onFinished = { viewModel.navigateTo(Screen.Home) })
+                Screen.Splash -> SplashScreen(onFinished = { viewModel.finishSplash() })
                 Screen.Onboarding -> OnboardingScreen(viewModel = viewModel)
                 Screen.Login -> LoginScreen(viewModel = viewModel)
                 Screen.Register -> RegisterScreen(viewModel = viewModel)
