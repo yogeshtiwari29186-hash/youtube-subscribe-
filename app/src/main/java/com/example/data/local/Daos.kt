@@ -60,6 +60,9 @@ interface PromotionDao {
     @Query("UPDATE promotions SET status = :status WHERE promotionId = :promotionId")
     suspend fun updatePromotionStatus(promotionId: String, status: PromotionStatus)
 
+    @Query("UPDATE promotions SET topListedUntil = :until WHERE promotionId = :promotionId")
+    suspend fun updateTopListedUntil(promotionId: String, until: Long)
+
     @Query("UPDATE promotions SET impressions = impressions + 1 WHERE promotionId = :promotionId")
     suspend fun incrementImpression(promotionId: String)
 
