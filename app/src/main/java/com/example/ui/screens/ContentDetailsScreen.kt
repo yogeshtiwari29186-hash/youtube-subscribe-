@@ -42,6 +42,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
@@ -55,12 +56,15 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import kotlinx.coroutines.delay
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.example.data.model.PromotionType
 import com.example.ui.components.ComplianceNoticeCard
 import com.example.ui.components.CreatorTopBar
@@ -89,6 +93,19 @@ fun ContentDetailsScreen(
     val context = LocalContext.current
     var previewSecondsLeft by remember(promo?.promotionId) { mutableStateOf(40) }
     var previewFinished by remember(promo?.promotionId) { mutableStateOf(false) }
+    var awaitingYouTubeReturn by remember(promo?.promotionId) { mutableStateOf(false) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    DisposableEffect(lifecycleOwner, awaitingYouTubeReturn, promo?.promotionId) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME && awaitingYouTubeReturn) {
+                awaitingYouTubeReturn = false
+                viewModel.onYouTubeSubscriptionReturn()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     LaunchedEffect(promo?.promotionId) {
         if (promo?.type == PromotionType.YOUTUBE_VIDEO) {
@@ -329,10 +346,12 @@ fun ContentDetailsScreen(
                 }
             }
 
-            // Official YouTube Open Action Button
+            // Official YouTube action. Subscription rewards require an authorized
+            // verification result; the app never infers a subscription from a public count.
             item {
                 Button(
                     onClick = {
+                        awaitingYouTubeReturn = true
                         YouTubeUtils.openOfficialYouTube(context, promo.targetUrl)
                     },
                     modifier = Modifier
@@ -351,7 +370,12 @@ fun ContentDetailsScreen(
                     ) {
                         Icon(Icons.Filled.PlayArrow, contentDescription = null)
                         Text(
-                            text = "Watch on Official YouTube ↗",
+                            text = when (promo.type) {
+                                PromotionType.YOUTUBE_VIDEO, PromotionType.YOUTUBE_CHANNEL ->
+                                    "Subscribe on Official YouTube ↗"
+                                PromotionType.CREATOR_PROFILE ->
+                                    "Open Official YouTube ↗"
+                            },
                             fontWeight = FontWeight.Bold,
                             fontSize = 15.sp
                         )
