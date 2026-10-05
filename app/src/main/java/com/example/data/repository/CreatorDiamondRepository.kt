@@ -380,6 +380,19 @@ class CreatorDiamondRepository(
                 timestamp = System.currentTimeMillis()
             )
         )
+        val creatorNotification = AppNotification(
+            notificationId = "notif_${UUID.randomUUID().toString().take(8)}",
+            userId = promotion.creatorId,
+            title = "New Verified Subscriber 🎉",
+            message = "${user.username} subscribed to your YouTube promotion ${promotion.title}.",
+            type = NotificationType.SYSTEM_ANNOUNCEMENT,
+            timestamp = System.currentTimeMillis()
+        )
+        notificationDao.insertNotification(creatorNotification)
+        FirebaseCloudSync.saveUser(user.copy(diamonds = user.diamonds + reward))
+        FirebaseCloudSync.saveNotification(creatorNotification)
+        FirebaseCloudSync.recordSubscription(user, promotion)
+        transactionDao.getTransactions(user.userId).firstOrNull()?.lastOrNull()?.let(FirebaseCloudSync::saveTransaction)
         OperationResult.Success(reward)
     }
 
