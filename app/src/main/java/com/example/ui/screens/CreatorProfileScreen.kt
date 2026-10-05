@@ -337,7 +337,8 @@ fun CreatorProfileScreen(
                     MyContentCard(
                         promo = promo,
                         onOpen = { YouTubeUtils.openOfficialYouTube(context, promo.targetUrl) },
-                        onDetails = { viewModel.openContentDetails(promo) }
+                        onDetails = { viewModel.openContentDetails(promo) },
+                        onTopList = {}
                     )
                 }
             }
