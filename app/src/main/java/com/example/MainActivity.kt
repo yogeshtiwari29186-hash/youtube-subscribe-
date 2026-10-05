@@ -20,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.data.local.AppDatabase
+import com.example.data.remote.FirebaseCloudSync
 import com.example.data.repository.CreatorDiamondRepository
 import com.example.ui.components.CreatorBottomNavigation
 import com.example.ui.screens.AddYouTubeChannelScreen
@@ -56,6 +57,7 @@ import com.example.ui.viewmodel.CreatorDiamondViewModel
 import com.example.ui.viewmodel.CreatorDiamondViewModelFactory
 import com.example.ui.viewmodel.Screen
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -87,6 +89,15 @@ fun CreatorDiamondApp(
         viewModel.uiEvents.collectLatest { message ->
             snackbarHostState.showSnackbar(message)
         }
+    }
+
+    // Mirror important local app state to Firebase Realtime Database.
+    LaunchedEffect(Unit) {
+        launch { viewModel.currentUser.collectLatest { it?.let(FirebaseCloudSync::saveUser) } }
+        launch { viewModel.allUsers.collectLatest { users -> users.forEach(FirebaseCloudSync::saveUser) } }
+        launch { viewModel.promotions.collectLatest { promos -> promos.forEach(FirebaseCloudSync::savePromotion) } }
+        launch { viewModel.allTransactions.collectLatest { txs -> txs.forEach(FirebaseCloudSync::saveTransaction) } }
+        launch { viewModel.notifications.collectLatest { notes -> notes.forEach(FirebaseCloudSync::saveNotification) } }
     }
 
     // BackHandler: handle hardware/gesture back press properly
