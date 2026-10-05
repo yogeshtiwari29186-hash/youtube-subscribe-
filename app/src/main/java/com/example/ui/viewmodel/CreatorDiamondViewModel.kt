@@ -125,7 +125,7 @@ class CreatorDiamondViewModel(
     private fun finishAuth(account: FirebaseUserData, message:String){
         viewModelScope.launch{
             when(val op=repository.useFirebaseUser(account)){
-                is OperationResult.Success->{_authLoading.value=false;_uiEvents.emit(message);navigateTo(if (currentUser.value?.isProfileComplete == true) Screen.Home else Screen.ChannelSetup)}
+                is OperationResult.Success->{_authLoading.value=false;_uiEvents.emit(message);navigateTo(if (repository.isCurrentUserProfileComplete()) Screen.Home else Screen.ChannelSetup)}
                 is OperationResult.Error->{_authLoading.value=false;_uiEvents.emit(op.message)}
             }
         }
