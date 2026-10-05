@@ -39,7 +39,8 @@ object YouTubeSubscriptionVerifier {
 
         client.newCall(request).execute().use { response ->
             if (!response.isSuccessful) return@withContext false
-            JSONObject(response.body?.string().orEmpty()).optInt("totalResults", 0) > 0
+            val body = response.body?.string().orEmpty()
+            JSONObject(body).optInt("totalResults", 0) > 0
         }
     }
 
@@ -56,10 +57,11 @@ object YouTubeSubscriptionVerifier {
 
         return client.newCall(request).execute().use { response ->
             if (!response.isSuccessful) return@use null
-            val items = JSONObject(response.body?.string().orEmpty()).optJSONArray("items")
-                ?: return@use null
+            val body = response.body?.string().orEmpty()
+            val items = JSONObject(body).optJSONArray("items") ?: return@use null
             if (items.length() == 0) return@use null
-            JSONObject(items.getJSONObject(0)).optString("id").takeIf { it.isNotBlank() }
+            val item = items.getJSONObject(0)
+            item.optString("id").takeIf { it.isNotBlank() }
         }
     }
 
@@ -73,11 +75,12 @@ object YouTubeSubscriptionVerifier {
 
         return client.newCall(request).execute().use { response ->
             if (!response.isSuccessful) return@use null
-            val items = JSONObject(response.body?.string().orEmpty()).optJSONArray("items")
-                ?: return@use null
+            val body = response.body?.string().orEmpty()
+            val items = JSONObject(body).optJSONArray("items") ?: return@use null
             if (items.length() == 0) return@use null
 
-            val snippet = items.getJSONObject(0).optJSONObject("snippet") ?: return@use null
+            val item = items.getJSONObject(0)
+            val snippet = item.optJSONObject("snippet") ?: return@use null
             snippet.optString("channelId").takeIf { it.isNotBlank() }
         }
     }
