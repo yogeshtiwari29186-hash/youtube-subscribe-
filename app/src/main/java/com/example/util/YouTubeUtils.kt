@@ -1,0 +1,110 @@
+package com.example.util
+
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import java.util.regex.Pattern
+
+data class ParsedYouTubeVideo(
+    val videoId: String,
+    val canonicalUrl: String,
+    val thumbnailUrl: String
+)
+
+data class ParsedYouTubeChannel(
+    val channelIdentifier: String,
+    val isHandle: Boolean,
+    val canonicalUrl: String,
+    val avatarUrl: String
+)
+
+object YouTubeUtils {
+    // Official video pattern matching standard watch URLs, shortlinks, and shorts
+    private val VIDEO_ID_PATTERNS = listOf(
+        Pattern.compile("(?:v=|/v/|embed/|shorts/|youtu\\.be/)([a-zA-Z0-9_-]{11})"),
+        Pattern.compile("^([a-zA-Z0-9_-]{11})$")
+    )
+
+    // Channel pattern matching handles and channel IDs
+    private val CHANNEL_HANDLE_PATTERN = Pattern.compile("(?:youtube\\.com/(?:@|c/))([a-zA-Z0-9_.-]+)")
+    private val CHANNEL_ID_PATTERN = Pattern.compile("youtube\\.com/channel/(UC[a-zA-Z0-9_-]{22})")
+
+    fun parseVideoUrl(input: String): ParsedYouTubeVideo? {
+        val trimmed = input.trim()
+        if (trimmed.isEmpty()) return null
+
+        for (pattern in VIDEO_ID_PATTERNS) {
+            val matcher = pattern.matcher(trimmed)
+            if (matcher.find()) {
+                val videoId = matcher.group(1) ?: continue
+                if (videoId.length == 11) {
+                    return ParsedYouTubeVideo(
+                        videoId = videoId,
+                        canonicalUrl = "https://www.youtube.com/watch?v=$videoId",
+                        thumbnailUrl = "https://img.youtube.com/vi/$videoId/hqdefault.jpg"
+                    )
+                }
+            }
+        }
+        return null
+    }
+
+    fun parseChannelUrl(input: String): ParsedYouTubeChannel? {
+        val trimmed = input.trim()
+        if (trimmed.isEmpty()) return null
+
+        val handleMatcher = CHANNEL_HANDLE_PATTERN.matcher(trimmed)
+        if (handleMatcher.find()) {
+            val handle = handleMatcher.group(1) ?: return null
+            val cleanHandle = if (handle.startsWith("@")) handle else "@$handle"
+            return ParsedYouTubeChannel(
+                channelIdentifier = cleanHandle,
+                isHandle = true,
+                canonicalUrl = "https://www.youtube.com/$cleanHandle",
+                avatarUrl = "https://ui-avatars.com/api/?name=${cleanHandle.removePrefix("@")}&background=00E5FF&color=0A0D14"
+            )
+        }
+
+        val idMatcher = CHANNEL_ID_PATTERN.matcher(trimmed)
+        if (idMatcher.find()) {
+            val channelId = idMatcher.group(1) ?: return null
+            return ParsedYouTubeChannel(
+                channelIdentifier = channelId,
+                isHandle = false,
+                canonicalUrl = "https://www.youtube.com/channel/$channelId",
+                avatarUrl = "https://ui-avatars.com/api/?name=Creator&background=2979FF&color=FFFFFF"
+            )
+        }
+
+        // Also accept raw handle directly e.g. @CreatorHub
+        if (trimmed.startsWith("@") && trimmed.length >= 3) {
+            return ParsedYouTubeChannel(
+                channelIdentifier = trimmed,
+                isHandle = true,
+                canonicalUrl = "https://www.youtube.com/$trimmed",
+                avatarUrl = "https://ui-avatars.com/api/?name=${trimmed.removePrefix("@")}&background=00E5FF&color=0A0D14"
+            )
+        }
+
+        return null
+    }
+
+    /**
+     * Opens official YouTube app or falls back to system browser.
+     * Complies with YouTube policy by directing the viewer to the official destination.
+     */
+    fun openOfficialYouTube(context: Context, url: String) {
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            context.startActivity(intent)
+        } catch (_: Exception) {
+            // Intent fallback to browser
+            val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            context.startActivity(webIntent)
+        }
+    }
+}
