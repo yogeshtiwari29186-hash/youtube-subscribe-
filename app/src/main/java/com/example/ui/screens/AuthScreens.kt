@@ -231,214 +231,46 @@ fun OnboardingScreen(
 }
 
 @Composable
-fun LoginScreen(
-    viewModel: CreatorDiamondViewModel,
-    modifier: Modifier = Modifier
-) {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val activity = context as? Activity
-    val authLoading by viewModel.authLoading.collectAsState()
-    val googleLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        viewModel.completeGoogleSignIn(result.data)
-    }
-
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(DarkBackground)
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Spacer(modifier = Modifier.height(60.dp))
-        Icon(Icons.Filled.Security, contentDescription = null, tint = DiamondCyan, modifier = Modifier.size(56.dp))
-        Spacer(modifier = Modifier.height(20.dp))
-        Text("Login", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            "Sign in with your real Google account. Your Firebase ID is created automatically on first login.",
-            color = TextSecondary,
-            fontSize = 14.sp,
-            lineHeight = 21.sp
-        )
-        Spacer(modifier = Modifier.height(24.dp))
-        GlassCard(modifier = Modifier.fillMaxWidth(), borderGlow = true) {
-            Column(modifier = Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("🎁 First login bonus", color = DiamondGold, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(6.dp))
-                Text("50 💎 free Diamonds", color = TextPrimary, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
-                Spacer(modifier = Modifier.height(6.dp))
-                Text("Only new Firebase accounts receive this one-time bonus.", color = TextSecondary, fontSize = 12.sp)
-            }
-        }
-        Spacer(modifier = Modifier.height(24.dp))
-        Button(
-            onClick = {
-                if (activity != null && !authLoading) {
-                    googleLauncher.launch(FirebaseGoogleAuth.signInIntent(activity))
-                }
-            },
-            modifier = Modifier.fillMaxWidth().height(54.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color(0xFF202124)),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Text(if (authLoading) "Signing in..." else "Login with Google", fontWeight = FontWeight.Bold, fontSize = 15.sp)
-        }
-        Spacer(modifier = Modifier.height(12.dp))
-        OutlinedButton(
-            onClick = { viewModel.navigateTo(Screen.Register) },
-            modifier = Modifier.fillMaxWidth().height(50.dp),
-            shape = RoundedCornerShape(12.dp),
-            border = BorderStroke(1.dp, DiamondCyan)
-        ) {
-            Text("Create New Account", color = DiamondCyan, fontWeight = FontWeight.Bold)
-        }
-        Spacer(modifier = Modifier.height(14.dp))
-        Text("Real Google account • No demo account • No guest login", color = TextMuted, fontSize = 12.sp)
+fun LoginScreen(viewModel: CreatorDiamondViewModel, modifier: Modifier = Modifier) {
+    var email by remember { mutableStateOf("") }; var password by remember { mutableStateOf("") }
+    val loading by viewModel.authLoading.collectAsState()
+    Column(modifier.fillMaxSize().background(DarkBackground).padding(24.dp),horizontalAlignment=Alignment.CenterHorizontally){
+        Spacer(Modifier.height(60.dp)); Icon(Icons.Filled.Security,null,tint=DiamondCyan,modifier=Modifier.size(56.dp))
+        Spacer(Modifier.height(20.dp)); Text("Login",style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.ExtraBold,color=TextPrimary)
+        Spacer(Modifier.height(24.dp))
+        OutlinedTextField(email,{email=it},label={Text("Email")},leadingIcon={Icon(Icons.Filled.Email,null)},singleLine=true,modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(12.dp))
+        Spacer(Modifier.height(12.dp))
+        OutlinedTextField(password,{password=it},label={Text("Password")},leadingIcon={Icon(Icons.Filled.Lock,null)},singleLine=true,visualTransformation=PasswordVisualTransformation(),modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(12.dp))
+        Spacer(Modifier.height(18.dp))
+        Button({if(!loading&&email.isNotBlank()&&password.length>=6)viewModel.loginWithEmail(email,password)},Modifier.fillMaxWidth().height(54.dp),colors=ButtonDefaults.buttonColors(containerColor=DiamondCyan,contentColor=Color(0xFF0A0D14))){Text(if(loading)"Logging in..." else "Login",fontWeight=FontWeight.Bold)}
+        Spacer(Modifier.height(8.dp)); OutlinedButton({viewModel.navigateTo(Screen.ForgotPassword)},Modifier.fillMaxWidth()){Text("Forgot Password")}
+        Spacer(Modifier.height(8.dp)); OutlinedButton({viewModel.navigateTo(Screen.Register)},Modifier.fillMaxWidth(),border=BorderStroke(1.dp,DiamondCyan)){Text("Create New Account",color=DiamondCyan)}
     }
 }
 
 @Composable
-fun RegisterScreen(
-    viewModel: CreatorDiamondViewModel,
-    modifier: Modifier = Modifier
-) {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val activity = context as? Activity
-    var name by remember { mutableStateOf("") }
-    val authLoading by viewModel.authLoading.collectAsState()
-    val googleLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        viewModel.completeGoogleSignIn(result.data, name)
-    }
-
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(DarkBackground)
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Spacer(modifier = Modifier.height(40.dp))
-        IconButton(onClick = { viewModel.navigateBack() }) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = TextPrimary)
-        }
-        Spacer(modifier = Modifier.height(12.dp))
-        Text("Create Your Account", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
-        Spacer(modifier = Modifier.height(8.dp))
-        Text("Enter your name, then continue with Google. A unique Firebase account is created for you.", color = TextSecondary, fontSize = 14.sp, lineHeight = 21.sp)
-        Spacer(modifier = Modifier.height(20.dp))
-        OutlinedTextField(
-            value = name,
-            onValueChange = { name = it },
-            label = { Text("Your Name") },
-            leadingIcon = { Icon(Icons.Filled.Person, contentDescription = null) },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = DiamondCyan,
-                unfocusedBorderColor = DarkBorder,
-                focusedTextColor = TextPrimary,
-                unfocusedTextColor = TextPrimary
-            ),
-            shape = RoundedCornerShape(12.dp)
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(
-            onClick = {
-                if (activity != null && !authLoading && name.isNotBlank()) {
-                    googleLauncher.launch(FirebaseGoogleAuth.signInIntent(activity))
-                }
-            },
-            modifier = Modifier.fillMaxWidth().height(54.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color(0xFF202124)),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Text(if (authLoading) "Creating account..." else "Create with Google", fontWeight = FontWeight.Bold, fontSize = 15.sp)
-        }
-        Spacer(modifier = Modifier.height(12.dp))
-        Text("50 💎 welcome Diamonds are added only on the first Firebase account creation.", color = DiamondGold, fontSize = 12.sp)
+fun RegisterScreen(viewModel: CreatorDiamondViewModel, modifier: Modifier = Modifier) {
+    var name by remember { mutableStateOf("") }; var email by remember { mutableStateOf("") }; var password by remember { mutableStateOf("") }; var confirm by remember { mutableStateOf("") }
+    val loading by viewModel.authLoading.collectAsState()
+    Column(modifier.fillMaxSize().background(DarkBackground).padding(24.dp),horizontalAlignment=Alignment.CenterHorizontally){
+        Spacer(Modifier.height(32.dp)); IconButton({viewModel.navigateBack()}){Icon(Icons.AutoMirrored.Filled.ArrowBack,"Back",tint=TextPrimary)}
+        Text("Create Your Account",style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.ExtraBold,color=TextPrimary); Spacer(Modifier.height(16.dp))
+        OutlinedTextField(name,{name=it},label={Text("Full Name")},leadingIcon={Icon(Icons.Filled.Person,null)},singleLine=true,modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(12.dp))
+        Spacer(Modifier.height(10.dp)); OutlinedTextField(email,{email=it},label={Text("Email")},leadingIcon={Icon(Icons.Filled.Email,null)},singleLine=true,modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(12.dp))
+        Spacer(Modifier.height(10.dp)); OutlinedTextField(password,{password=it},label={Text("Password (6+ characters)")},leadingIcon={Icon(Icons.Filled.Lock,null)},singleLine=true,visualTransformation=PasswordVisualTransformation(),modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(12.dp))
+        Spacer(Modifier.height(10.dp)); OutlinedTextField(confirm,{confirm=it},label={Text("Confirm Password")},leadingIcon={Icon(Icons.Filled.Lock,null)},singleLine=true,visualTransformation=PasswordVisualTransformation(),modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(12.dp))
+        Spacer(Modifier.height(16.dp)); Button({if(!loading&&name.isNotBlank()&&email.isNotBlank()&&password.length>=6&&password==confirm)viewModel.registerWithEmail(name,email,password)},Modifier.fillMaxWidth().height(54.dp),colors=ButtonDefaults.buttonColors(containerColor=DiamondCyan,contentColor=Color(0xFF0A0D14))){Text(if(loading)"Creating..." else "Create Account",fontWeight=FontWeight.Bold)}
+        Spacer(Modifier.height(10.dp)); Text("50 💎 welcome Diamonds for a new Firebase account.",color=DiamondGold,fontSize=12.sp)
     }
 }
 
 @Composable
-fun ForgotPasswordScreen(
-    viewModel: CreatorDiamondViewModel,
-    modifier: Modifier = Modifier
-) {
-    var email by remember { mutableStateOf("") }
-    var submitted by remember { mutableStateOf(false) }
-
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(DarkBackground)
-            .padding(24.dp)
-    ) {
-        IconButton(
-            onClick = { viewModel.navigateBack() },
-            modifier = Modifier.padding(bottom = 16.dp)
-        ) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = TextPrimary)
-        }
-
-        Text(
-            text = "Reset Password",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.ExtraBold,
-            color = TextPrimary
-        )
-        Text(
-            text = "Enter your registered email. We'll send instructions to recover your session.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = TextSecondary
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        if (submitted) {
-            GlassCard(modifier = Modifier.fillMaxWidth(), borderGlow = true) {
-                Column(modifier = Modifier.padding(20.dp)) {
-                    Text("Recovery Link Dispatched", color = SuccessGreen, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text("If an account exists for $email, password recovery instructions have been delivered.", color = TextSecondary, fontSize = 12.sp)
-                    Spacer(modifier = Modifier.height(14.dp))
-                    Button(
-                        onClick = { viewModel.navigateTo(Screen.Login) },
-                        colors = ButtonDefaults.buttonColors(containerColor = DiamondCyan, contentColor = Color(0xFF0A0D14))
-                    ) {
-                        Text("Return to Login", fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-        } else {
-            OutlinedTextField(
-                value = email,
-                onValueChange = { email = it },
-                label = { Text("Email Address") },
-                modifier = Modifier.fillMaxWidth(),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = DiamondCyan,
-                    unfocusedBorderColor = DarkBorder,
-                    focusedTextColor = TextPrimary,
-                    unfocusedTextColor = TextPrimary
-                ),
-                shape = RoundedCornerShape(12.dp)
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Button(
-                onClick = { if (email.isNotBlank()) submitted = true },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = DiamondCyan,
-                    contentColor = Color(0xFF0A0D14)
-                ),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text("Send Reset Link", fontWeight = FontWeight.Bold)
-            }
-        }
+fun ForgotPasswordScreen(viewModel: CreatorDiamondViewModel, modifier: Modifier = Modifier) {
+    var email by remember { mutableStateOf("") }; val loading by viewModel.authLoading.collectAsState()
+    Column(modifier.fillMaxSize().background(DarkBackground).padding(24.dp)){
+        IconButton({viewModel.navigateBack()}){Icon(Icons.AutoMirrored.Filled.ArrowBack,"Back",tint=TextPrimary)}
+        Text("Reset Password",style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.ExtraBold,color=TextPrimary)
+        Spacer(Modifier.height(20.dp)); OutlinedTextField(email,{email=it},label={Text("Email Address")},leadingIcon={Icon(Icons.Filled.Email,null)},singleLine=true,modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(12.dp))
+        Spacer(Modifier.height(20.dp)); Button({if(!loading&&email.isNotBlank())viewModel.resetPassword(email)},Modifier.fillMaxWidth().height(50.dp),colors=ButtonDefaults.buttonColors(containerColor=DiamondCyan,contentColor=Color(0xFF0A0D14))){Text(if(loading)"Sending..." else "Send Reset Link")}
     }
 }
