@@ -91,23 +91,40 @@ class CreatorDiamondViewModel(
     fun completeGoogleSignIn(data: Intent?, nameOverride: String? = null) {
         _authLoading.value = true
         FirebaseGoogleAuth.completeSignIn(data, nameOverride) { result ->
-            result.onSuccess { account ->
-                viewModelScope.launch {
-                    when (val operation = repository.useFirebaseUser(account)) {
-                        is OperationResult.Success -> {
-                            _authLoading.value = false
-                            _uiEvents.emit(if (nameOverride.isNullOrBlank()) "Google login successful" else "Account created successfully")
-                            navigateTo(Screen.Home)
-                        }
-                        is OperationResult.Error -> {
-                            _authLoading.value = false
-                            _uiEvents.emit(operation.message)
-                        }
-                    }
-                }
-            }.onFailure {
-                _authLoading.value = false
-                viewModelScope.launch { _uiEvents.emit("Google login failed: " + (it.message ?: "Try again")) }
+            result.onSuccess { finishAuth(it, if(nameOverride.isNullOrBlank()) "Login successful" else "Account created successfully") }
+                .onFailure { _authLoading.value=false; viewModelScope.launch{_uiEvents.emit("Login failed: "+(it.message?:"Try again"))} }
+        }
+    }
+
+    fun loginWithEmail(email:String,password:String){
+        _authLoading.value=true
+        FirebaseGoogleAuth.signInWithEmail(email,password){result->
+            result.onSuccess{finishAuth(it,"Login successful")}
+                .onFailure{_authLoading.value=false;viewModelScope.launch{_uiEvents.emit("Login failed: "+(it.message?:"Check email and password"))}}
+        }
+    }
+
+    fun registerWithEmail(name:String,email:String,password:String){
+        _authLoading.value=true
+        FirebaseGoogleAuth.createAccountWithEmail(name,email,password){result->
+            result.onSuccess{finishAuth(it,"Account created successfully")}
+                .onFailure{_authLoading.value=false;viewModelScope.launch{_uiEvents.emit("Signup failed: "+(it.message?:"Check your details"))}}
+        }
+    }
+
+    fun resetPassword(email:String){
+        _authLoading.value=true
+        FirebaseGoogleAuth.sendPasswordReset(email){result->
+            _authLoading.value=false
+            viewModelScope.launch{_uiEvents.emit(if(result.isSuccess)"Password reset email sent" else "Reset failed: "+(result.exceptionOrNull()?.message?:"Try again"))}
+        }
+    }
+
+    private fun finishAuth(account: FirebaseUserData, message:String){
+        viewModelScope.launch{
+            when(val op=repository.useFirebaseUser(account)){
+                is OperationResult.Success->{_authLoading.value=false;_uiEvents.emit(message);navigateTo(Screen.Home)}
+                is OperationResult.Error->{_authLoading.value=false;_uiEvents.emit(op.message)}
             }
         }
     }
