@@ -47,16 +47,16 @@ data class UserAccount(
     val email: String,
     val profileImage: String = "",
     val bio: String = "",
-    val diamonds: Long = 2450L, // Matches prompt sample 2,450 💎
+    val diamonds: Long = 0L,
     val youtubeChannelId: String = "",
     val youtubeChannelUrl: String = "",
     val creatorEnabled: Boolean = true, // Unified Viewer + Creator capability
-    val followersCount: Int = 128,
-    val followingCount: Int = 42,
+    val followersCount: Int = 0,
+    val followingCount: Int = 0,
     val isSuspended: Boolean = false,
     val isProfileComplete: Boolean = true,
     val lastCheckInDate: String = "",
-    val checkInStreak: Int = 3,
+    val checkInStreak: Int = 0,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
 )
@@ -79,6 +79,7 @@ data class PromotionItem(
     val status: PromotionStatus = PromotionStatus.ACTIVE,
     val impressions: Int = 0,
     val clicks: Int = 0,
+    val topListedUntil: Long = 0L,
     val createdAt: Long = System.currentTimeMillis(),
     val expiresAt: Long = System.currentTimeMillis() + (durationDays * 86400000L)
 )
@@ -164,5 +165,6 @@ data class EconomySettings(
     val referralReward: Long = 30L,
     val minimumPromotionBudget: Long = 100L,
     val maximumWalletBalance: Long = 100000L,
-    val costPerDayPer100Reach: Long = 100L
+    val costPerDayPer100Reach: Long = 100L,
+    val topListDailyCost: Long = 100L
 )
