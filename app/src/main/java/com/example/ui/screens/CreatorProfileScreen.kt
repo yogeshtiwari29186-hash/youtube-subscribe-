@@ -98,7 +98,7 @@ fun CreatorProfileScreen(
             .background(DarkBackground)
     ) {
         CreatorTopBar(
-            title = if (isSelf) "My Creator Profile" else (user?.username ?: "Creator"),
+            title = if (isSelf) "My Profile" else (user?.username ?: "Profile"),
             showBack = !isSelf,
             onBackClick = { viewModel.navigateBack() }
         )
@@ -190,7 +190,7 @@ fun CreatorProfileScreen(
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Text(
-                            text = user?.username ?: "Creator",
+                            text = user?.username ?: "Profile",
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.ExtraBold,
                             color = TextPrimary
@@ -312,7 +312,7 @@ fun CreatorProfileScreen(
             // Creator Badges
             item {
                 Column(modifier = Modifier.padding(horizontal = 20.dp)) {
-                    Text("Creator Recognition", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Text("Recognition", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = TextPrimary)
                     Spacer(modifier = Modifier.height(10.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
