@@ -270,10 +270,26 @@ fun LoginScreen(
                 Text("Only new Firebase accounts receive this one-time bonus.", color = TextSecondary, fontSize = 12.sp)
             }
         }
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(20.dp))
+        OutlinedTextField(
+            value = name,
+            onValueChange = { name = it },
+            label = { Text("Your Name") },
+            leadingIcon = { Icon(Icons.Filled.Person, contentDescription = null) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = DiamondCyan,
+                unfocusedBorderColor = DarkBorder,
+                focusedTextColor = TextPrimary,
+                unfocusedTextColor = TextPrimary
+            ),
+            shape = RoundedCornerShape(12.dp)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
         Button(
             onClick = {
-                if (activity != null && !authLoading) {
+                if (activity != null && !authLoading && name.isNotBlank()) {
                     googleLauncher.launch(FirebaseGoogleAuth.signInIntent(activity))
                 }
             },
@@ -283,8 +299,17 @@ fun LoginScreen(
         ) {
             Text(if (authLoading) "Signing in..." else "Login with Google", fontWeight = FontWeight.Bold, fontSize = 15.sp)
         }
+        Spacer(modifier = Modifier.height(12.dp))
+        OutlinedButton(
+            onClick = { viewModel.navigateTo(Screen.Register) },
+            modifier = Modifier.fillMaxWidth().height(50.dp),
+            shape = RoundedCornerShape(12.dp),
+            border = BorderStroke(1.dp, DiamondCyan)
+        ) {
+            Text("Create New Account", color = DiamondCyan, fontWeight = FontWeight.Bold)
+        }
         Spacer(modifier = Modifier.height(14.dp))
-        Text("No demo account • No guest login", color = TextMuted, fontSize = 12.sp)
+        Text("Real Google account • No demo account • No guest login", color = TextMuted, fontSize = 12.sp)
     }
 }
 
@@ -295,9 +320,10 @@ fun RegisterScreen(
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val activity = context as? Activity
+    var name by remember { mutableStateOf("") }
     val authLoading by viewModel.authLoading.collectAsState()
     val googleLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        viewModel.completeGoogleSignIn(result.data)
+        viewModel.completeGoogleSignIn(result.data, name)
     }
 
     Column(
