@@ -196,7 +196,8 @@ fun MyContentScreen(
                     MyContentCard(
                         promo = promo,
                         onOpen = { YouTubeUtils.openOfficialYouTube(context, promo.targetUrl) },
-                        onDetails = { viewModel.openContentDetails(promo) }
+                        onDetails = { viewModel.openContentDetails(promo) },
+                        onTopList = { viewModel.promoteToTopList(promo.promotionId) }
                     )
                 }
             }
@@ -208,7 +209,8 @@ fun MyContentScreen(
 fun MyContentCard(
     promo: PromotionItem,
     onOpen: () -> Unit,
-    onDetails: () -> Unit
+    onDetails: () -> Unit,
+    onTopList: () -> Unit
 ) {
     val dateStr = SimpleDateFormat("MMM dd, yyyy", Locale.US).format(Date(promo.createdAt))
 
@@ -297,6 +299,29 @@ fun MyContentCard(
                         fontSize = 11.sp,
                         color = TextMuted
                     )
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    if (promo.topListedUntil > System.currentTimeMillis()) "🔥 Top List active" else "Daily Top List: 100 💎",
+                    color = if (promo.topListedUntil > System.currentTimeMillis()) DiamondGold else TextSecondary,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                if (promo.topListedUntil <= System.currentTimeMillis()) {
+                    Button(
+                        onClick = onTopList,
+                        colors = ButtonDefaults.buttonColors(containerColor = DiamondCyan, contentColor = Color(0xFF0A0D14)),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 5.dp)
+                    ) {
+                        Text("Top List", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
 
