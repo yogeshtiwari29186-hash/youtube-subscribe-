@@ -294,9 +294,10 @@ class CreatorDiamondViewModel(
     }
 
     fun setBudgetAndDuration(budget: Long, durationDays: Int) {
+        val daysFromDiamonds = (budget / 100L).coerceAtLeast(1L).toInt()
         _creationState.value = _creationState.value.copy(
             budget = budget,
-            durationDays = durationDays
+            durationDays = daysFromDiamonds
         )
         navigateTo(Screen.PromotionConfirmation)
     }
