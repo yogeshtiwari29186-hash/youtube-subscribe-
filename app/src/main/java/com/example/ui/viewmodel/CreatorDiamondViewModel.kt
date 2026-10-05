@@ -88,15 +88,15 @@ class CreatorDiamondViewModel(
     private val _authLoading = MutableStateFlow(false)
     val authLoading: StateFlow<Boolean> = _authLoading.asStateFlow()
 
-    fun completeGoogleSignIn(data: Intent?) {
+    fun completeGoogleSignIn(data: Intent?, nameOverride: String? = null) {
         _authLoading.value = true
-        FirebaseGoogleAuth.completeSignIn(data) { result ->
+        FirebaseGoogleAuth.completeSignIn(data, nameOverride) { result ->
             result.onSuccess { account ->
                 viewModelScope.launch {
                     when (val operation = repository.useFirebaseUser(account)) {
                         is OperationResult.Success -> {
                             _authLoading.value = false
-                            _uiEvents.emit("Google login successful")
+                            _uiEvents.emit(if (nameOverride.isNullOrBlank()) "Google login successful" else "Account created successfully")
                             navigateTo(Screen.Home)
                         }
                         is OperationResult.Error -> {
