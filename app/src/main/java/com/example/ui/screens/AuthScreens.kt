@@ -1,5 +1,10 @@
 package com.example.ui.screens
 
+import android.app.Activity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import com.example.auth.FirebaseGoogleAuth
+
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -232,6 +237,12 @@ fun LoginScreen(
     var email by remember { mutableStateOf("alex.creator@creatordiamond.com") }
     var password by remember { mutableStateOf("••••••••") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val activity = context as? Activity
+    val authLoading by viewModel.authLoading.collectAsState()
+    val googleLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        viewModel.completeGoogleSignIn(result.data)
+    }
 
     Column(
         modifier = modifier
@@ -320,6 +331,26 @@ fun LoginScreen(
             if (errorMessage != null) {
                 item {
                     Text(text = errorMessage ?: "", color = ErrorRed, fontSize = 12.sp)
+                }
+            }
+
+            item {
+                Button(
+                    onClick = {
+                        if (activity != null && !authLoading) {
+                            googleLauncher.launch(FirebaseGoogleAuth.signInIntent(activity))
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.White,
+                        contentColor = Color(0xFF202124)
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(if (authLoading) "Signing in with Google..." else "Continue with Google", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 }
             }
 
