@@ -164,6 +164,45 @@ fun WalletScreen(
                             fontSize = 12.sp
                         )
 
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            color = SuccessGreen.copy(alpha = 0.10f),
+                            border = BorderStroke(1.dp, SuccessGreen.copy(alpha = 0.28f))
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column {
+                                    Text(
+                                        text = "TOTAL DIAMONDS EARNED",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = SuccessGreen,
+                                        letterSpacing = 0.8.sp
+                                    )
+                                    Text(
+                                        text = "All rewards + welcome bonus + verified earnings",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = TextSecondary,
+                                        fontSize = 10.sp
+                                    )
+                                }
+                                Text(
+                                    text = "+${NumberFormat.getNumberInstance(Locale.US).format(wallet.totalEarned)} 💎",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = SuccessGreen
+                                )
+                            }
+                        }
+
                         Spacer(modifier = Modifier.height(20.dp))
 
                         // Quick Action Buttons
