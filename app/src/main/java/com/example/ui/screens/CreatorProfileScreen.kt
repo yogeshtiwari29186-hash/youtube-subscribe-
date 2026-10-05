@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Campaign
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Diamond
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Flag
@@ -152,6 +153,18 @@ fun CreatorProfileScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         if (isSelf) {
+                            Surface(
+                                shape = CircleShape,
+                                color = DarkSurfaceHighlight,
+                                modifier = Modifier.clickable { viewModel.navigateTo(Screen.QuickVideoPromotion) }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Add,
+                                    contentDescription = "Promote video",
+                                    tint = DiamondCyan,
+                                    modifier = Modifier.padding(8.dp)
+                                )
+                            }
                             Surface(
                                 shape = CircleShape,
                                 color = DarkSurfaceHighlight,
