@@ -15,6 +15,9 @@ import com.example.data.model.ReportItem
 import com.example.data.model.TransactionType
 import com.example.data.model.UserAccount
 import com.example.data.model.WalletOverview
+import android.content.Intent
+import com.example.auth.FirebaseGoogleAuth
+import com.example.data.remote.FirebaseCloudSync
 import com.example.data.repository.CreatorDiamondRepository
 import com.example.data.repository.OperationResult
 import com.example.util.YouTubeUtils
@@ -81,6 +84,32 @@ class CreatorDiamondViewModel(
     private val repository: CreatorDiamondRepository
 ) : ViewModel() {
 
+    private val _authLoading = MutableStateFlow(false)
+    val authLoading: StateFlow<Boolean> = _authLoading.asStateFlow()
+
+    fun completeGoogleSignIn(data: Intent?) {
+        _authLoading.value = true
+        FirebaseGoogleAuth.completeSignIn(data) { result ->
+            result.onSuccess { account ->
+                viewModelScope.launch {
+                    when (val operation = repository.useFirebaseUser(account)) {
+                        is OperationResult.Success -> {
+                            _authLoading.value = false
+                            _uiEvents.emit("Google login successful")
+                            navigateTo(Screen.Home)
+                        }
+                        is OperationResult.Error -> {
+                            _authLoading.value = false
+                            _uiEvents.emit(operation.message)
+                        }
+                    }
+                }
+            }.onFailure {
+                _authLoading.value = false
+                viewModelScope.launch { _uiEvents.emit("Google login failed: " + (it.message ?: "Try again")) }
+            }
+        }
+    }
     // Navigation State
     private val _currentScreen = MutableStateFlow<Screen>(Screen.Home)
     val currentScreen: StateFlow<Screen> = _currentScreen.asStateFlow()
