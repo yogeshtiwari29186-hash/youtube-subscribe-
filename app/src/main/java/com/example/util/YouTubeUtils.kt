@@ -4,10 +4,21 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import java.util.regex.Pattern
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.net.HttpURLConnection
+import java.net.URL
 
 data class ParsedYouTubeVideo(
     val videoId: String,
     val canonicalUrl: String,
+    val thumbnailUrl: String
+)
+
+data class ChannelPreview(
+    val channelIdentifier: String,
+    val canonicalUrl: String,
+    val channelName: String,
     val thumbnailUrl: String
 )
 
@@ -87,6 +98,35 @@ object YouTubeUtils {
         }
 
         return null
+    }
+
+
+    suspend fun fetchChannelPreview(inputUrl: String): ChannelPreview? = withContext(Dispatchers.IO) {
+        try {
+            val parsed = parseChannelUrl(inputUrl) ?: return@withContext null
+            val connection = (URL(parsed.canonicalUrl).openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                connectTimeout = 10000
+                readTimeout = 10000
+                setRequestProperty("User-Agent", "Mozilla/5.0")
+                instanceFollowRedirects = true
+            }
+            val html = connection.inputStream.bufferedReader().use { it.readText() }
+            connection.disconnect()
+
+            fun meta(property: String): String? {
+                val p1 = Regex("""<meta[^>]+(?:property|name)=["']${Regex.escape(property)}["'][^>]+content=["']([^"']+)["']""", RegexOption.IGNORE_CASE)
+                val p2 = Regex("""<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["']${Regex.escape(property)}["']""", RegexOption.IGNORE_CASE)
+                return (p1.find(html)?.groupValues?.getOrNull(1) ?: p2.find(html)?.groupValues?.getOrNull(1))
+                    ?.replace("&amp;", "&")
+            }
+
+            val title = meta("og:title") ?: parsed.channelIdentifier
+            val image = meta("og:image") ?: parsed.avatarUrl
+            ChannelPreview(parsed.channelIdentifier, parsed.canonicalUrl, title, image)
+        } catch (_: Exception) {
+            null
+        }
     }
 
     /**
