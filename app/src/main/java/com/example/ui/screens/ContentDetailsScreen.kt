@@ -1,6 +1,8 @@
 package com.example.ui.screens
 
 import android.content.Intent
+import androidx.core.app.ActivityOptionsCompat
+import androidx.activity.result.IntentSenderRequest
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -83,6 +85,8 @@ import com.example.ui.theme.TextSecondary
 import com.example.ui.viewmodel.CreatorDiamondViewModel
 import com.example.ui.viewmodel.Screen
 import com.example.util.YouTubeUtils
+import com.example.util.YouTubeSubscriptionVerifier
+import com.google.android.gms.auth.api.identity.Identity
 
 @Composable
 fun ContentDetailsScreen(
@@ -94,6 +98,43 @@ fun ContentDetailsScreen(
     var previewSecondsLeft by remember(promo?.promotionId) { mutableStateOf(40) }
     var previewFinished by remember(promo?.promotionId) { mutableStateOf(false) }
     var awaitingYouTubeReturn by remember(promo?.promotionId) { mutableStateOf(false) }
+    var verifyingSubscription by remember(promo?.promotionId) { mutableStateOf(false) }
+    val subscriptionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK && result.data != null) {
+            try {
+                val authResult = Identity.getAuthorizationClient(context)
+                    .getAuthorizationResultFromIntent(result.data)
+                val token = authResult.accessToken
+                if (token.isNullOrBlank()) {
+                    verifyingSubscription = false
+                    viewModel.onYouTubeSubscriptionReturn()
+                } else {
+                    verifyingSubscription = true
+                    kotlinx.coroutines.MainScope().launch {
+                        val subscribed = YouTubeSubscriptionVerifier.isSubscribed(
+                            accessToken = token,
+                            targetVideoId = promo?.takeIf { it.type == PromotionType.YOUTUBE_VIDEO }?.targetId,
+                            targetChannelId = promo?.takeIf { it.type == PromotionType.YOUTUBE_CHANNEL }?.targetId
+                        )
+                        verifyingSubscription = false
+                        if (subscribed && promo != null) {
+                            viewModel.applyVerifiedYouTubeSubscriptionReward(promo.promotionId)
+                        } else {
+                            viewModel.onYouTubeSubscriptionReturn()
+                        }
+                    }
+                }
+            } catch (_: Exception) {
+                verifyingSubscription = false
+                viewModel.onYouTubeSubscriptionReturn()
+            }
+        } else {
+            verifyingSubscription = false
+            viewModel.onYouTubeSubscriptionReturn()
+        }
+    }
     val lifecycleOwner = LocalLifecycleOwner.current
 
     DisposableEffect(lifecycleOwner, awaitingYouTubeReturn, promo?.promotionId) {
@@ -198,7 +239,7 @@ fun ContentDetailsScreen(
                             .padding(12.dp)
                     ) {
                         Text(
-                            text = when (promo.type) {
+                            text = if (verifyingSubscription) "Verifying YouTube Subscription…" else when (promo.type) {
                                 PromotionType.YOUTUBE_VIDEO -> "YouTube Video"
                                 PromotionType.YOUTUBE_CHANNEL -> "YouTube Channel"
                                 PromotionType.CREATOR_PROFILE -> "Creator Profile"
@@ -352,7 +393,18 @@ fun ContentDetailsScreen(
                 Button(
                     onClick = {
                         awaitingYouTubeReturn = true
-                        YouTubeUtils.openOfficialYouTube(context, promo.targetUrl)
+                        val task = YouTubeSubscriptionVerifier.requestAuthorization(context)
+                        task.addOnSuccessListener { authResult ->
+                            if (authResult.hasResolution()) {
+                                subscriptionLauncher.launch(
+                                    IntentSenderRequest.Builder(authResult.pendingIntent!!.intentSender).build()
+                                )
+                            } else {
+                                YouTubeUtils.openOfficialYouTube(context, promo.targetUrl)
+                            }
+                        }.addOnFailureListener {
+                            YouTubeUtils.openOfficialYouTube(context, promo.targetUrl)
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
