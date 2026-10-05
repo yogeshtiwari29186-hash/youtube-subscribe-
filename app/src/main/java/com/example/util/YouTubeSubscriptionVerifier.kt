@@ -23,7 +23,7 @@ object YouTubeSubscriptionVerifier {
 
     suspend fun isSubscribed(accessToken: String, targetVideoId: String? = null, targetChannelId: String? = null): Boolean =
         withContext(Dispatchers.IO) {
-            val channelId = targetChannelId ?: targetVideoId?.let { resolveVideoChannelId(accessToken, it) }
+            val channelId = targetChannelId?.let { resolveChannelId(accessToken, it) } ?: targetVideoId?.let { resolveVideoChannelId(accessToken, it) }
                 ?: return@withContext false
 
             val encoded = java.net.URLEncoder.encode(channelId, "UTF-8")
@@ -35,6 +35,20 @@ object YouTubeSubscriptionVerifier {
                 JSONObject(response.body?.string().orEmpty()).optInt("totalResults", 0) > 0
             }
         }
+
+    private fun resolveChannelId(accessToken: String, value: String): String? {
+        if (value.startsWith("UC")) return value
+        val handle = value.removePrefix("@")
+        val encoded = java.net.URLEncoder.encode("@$handle", "UTF-8")
+        val url = "https://www.googleapis.com/youtube/v3/channels?part=id&forHandle=$encoded"
+        val request = Request.Builder().url(url).header("Authorization", "Bearer $accessToken").build()
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) return null
+            val items = JSONObject(response.body?.string().orEmpty()).optJSONArray("items") ?: return null
+            if (items.length() == 0) return null
+            JSONObject(items.getJSONObject(0)).optString("id").takeIf { it.isNotBlank() }
+        }
+    }
 
     private fun resolveVideoChannelId(accessToken: String, videoId: String): String? {
         val encoded = java.net.URLEncoder.encode(videoId, "UTF-8")
