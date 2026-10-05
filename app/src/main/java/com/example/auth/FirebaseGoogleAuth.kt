@@ -18,7 +18,7 @@ object FirebaseGoogleAuth {
         return GoogleSignIn.getClient(activity, options).signInIntent
     }
 
-    fun completeSignIn(data: Intent?, onResult: (Result<FirebaseUserData>) -> Unit) {
+    fun completeSignIn(data: Intent?, nameOverride: String? = null, onResult: (Result<FirebaseUserData>) -> Unit) {
         val task = GoogleSignIn.getSignedInAccountFromIntent(data)
         try {
             val account = task.getResult(Exception::class.java)
