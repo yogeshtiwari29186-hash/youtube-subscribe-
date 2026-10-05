@@ -125,7 +125,8 @@ object YouTubeUtils {
             val image = meta("og:image") ?: parsed.avatarUrl
             ChannelPreview(parsed.channelIdentifier, parsed.canonicalUrl, title, image)
         } catch (_: Exception) {
-            null
+            val parsed = parseChannelUrl(inputUrl) ?: return@withContext null
+            ChannelPreview(parsed.channelIdentifier, parsed.canonicalUrl, parsed.channelIdentifier, parsed.avatarUrl)
         }
     }
 
