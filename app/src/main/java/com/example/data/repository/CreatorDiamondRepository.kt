@@ -627,6 +627,8 @@ class CreatorDiamondRepository(
     // ==========================================
 
     private suspend fun seedInitialDataIfEmpty() {
+        return
+
         val existingUser = userDao.getUserSync("user_main_creator")
         if (existingUser == null) {
             val mainUser = UserAccount(
