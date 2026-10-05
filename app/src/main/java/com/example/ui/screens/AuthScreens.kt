@@ -270,26 +270,10 @@ fun LoginScreen(
                 Text("Only new Firebase accounts receive this one-time bonus.", color = TextSecondary, fontSize = 12.sp)
             }
         }
-        Spacer(modifier = Modifier.height(20.dp))
-        OutlinedTextField(
-            value = name,
-            onValueChange = { name = it },
-            label = { Text("Your Name") },
-            leadingIcon = { Icon(Icons.Filled.Person, contentDescription = null) },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = DiamondCyan,
-                unfocusedBorderColor = DarkBorder,
-                focusedTextColor = TextPrimary,
-                unfocusedTextColor = TextPrimary
-            ),
-            shape = RoundedCornerShape(12.dp)
-        )
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
         Button(
             onClick = {
-                if (activity != null && !authLoading && name.isNotBlank()) {
+                if (activity != null && !authLoading) {
                     googleLauncher.launch(FirebaseGoogleAuth.signInIntent(activity))
                 }
             },
@@ -341,10 +325,26 @@ fun RegisterScreen(
         Text("Create Your Account", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
         Spacer(modifier = Modifier.height(8.dp))
         Text("Enter your name, then continue with Google. A unique Firebase account is created for you.", color = TextSecondary, fontSize = 14.sp, lineHeight = 21.sp)
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(20.dp))
+        OutlinedTextField(
+            value = name,
+            onValueChange = { name = it },
+            label = { Text("Your Name") },
+            leadingIcon = { Icon(Icons.Filled.Person, contentDescription = null) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = DiamondCyan,
+                unfocusedBorderColor = DarkBorder,
+                focusedTextColor = TextPrimary,
+                unfocusedTextColor = TextPrimary
+            ),
+            shape = RoundedCornerShape(12.dp)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
         Button(
             onClick = {
-                if (activity != null && !authLoading) {
+                if (activity != null && !authLoading && name.isNotBlank()) {
                     googleLauncher.launch(FirebaseGoogleAuth.signInIntent(activity))
                 }
             },
