@@ -311,7 +311,7 @@ class CreatorDiamondRepository(
             return@withContext OperationResult.Success(Unit)
         }
 
-        val welcomeDiamonds = 50L
+        val welcomeDiamonds = 200L
         val user = UserAccount(
             userId = account.uid,
             username = account.name.ifBlank { account.email.substringBefore("@").ifBlank { "Creator" } },
@@ -328,16 +328,16 @@ class CreatorDiamondRepository(
             userId = user.userId,
             amount = welcomeDiamonds,
             type = TransactionType.BONUS,
-            reason = "First login welcome bonus",
+            reason = "New account welcome bonus",
             timestamp = System.currentTimeMillis(),
-            relatedId = "first_login_50"
+            relatedId = "new_account_200"
         )
         transactionDao.insertTransaction(welcomeTx)
         val welcomeNotification = AppNotification(
             notificationId = "notif_${UUID.randomUUID().toString().take(8)}",
             userId = user.userId,
             title = "Welcome! 🎉",
-            message = "Your new account received 50 💎 free Diamonds.",
+            message = "Your new account received 200 💎 free Diamonds.",
             type = NotificationType.DIAMOND_EARNED,
             timestamp = System.currentTimeMillis()
         )
@@ -345,6 +345,28 @@ class CreatorDiamondRepository(
         FirebaseCloudSync.saveUser(user)
         FirebaseCloudSync.saveTransaction(welcomeTx)
         FirebaseCloudSync.saveNotification(welcomeNotification)
+        OperationResult.Success(Unit)
+    }
+
+    suspend fun confirmChannelSetup(
+        channelName: String,
+        channelUrl: String,
+        channelId: String,
+        thumbnailUrl: String
+    ): OperationResult<Unit> = withContext(Dispatchers.IO) {
+        val user = userDao.getUserSync(_currentUserId.value)
+            ?: return@withContext OperationResult.Error("User not found")
+        val updated = user.copy(
+            username = channelName.trim().ifEmpty { user.username },
+            profileImage = thumbnailUrl.trim(),
+            youtubeChannelUrl = channelUrl.trim(),
+            youtubeChannelId = channelId.trim(),
+            creatorEnabled = true,
+            isProfileComplete = true,
+            updatedAt = System.currentTimeMillis()
+        )
+        userDao.updateUser(updated)
+        FirebaseCloudSync.saveUser(updated)
         OperationResult.Success(Unit)
     }
 
