@@ -27,6 +27,8 @@ import com.example.ui.screens.AddYouTubeChannelScreen
 import com.example.ui.screens.AddYouTubeVideoScreen
 import com.example.ui.screens.AdminPanelScreen
 import com.example.ui.screens.ContentDetailsScreen
+import com.example.ui.screens.ChannelSetupScreen
+import com.example.ui.screens.QuickVideoPromotionScreen
 import com.example.ui.screens.ContentFeedScreen
 import com.example.ui.screens.CreatorProfileScreen
 import com.example.ui.screens.EarnScreen
@@ -132,6 +134,8 @@ fun CreatorDiamondApp(
             when (currentScreen) {
                 Screen.Splash -> SplashScreen(onFinished = { viewModel.finishSplash() })
                 Screen.Onboarding -> OnboardingScreen(viewModel = viewModel)
+                Screen.ChannelSetup -> ChannelSetupScreen(viewModel = viewModel)
+                Screen.QuickVideoPromotion -> QuickVideoPromotionScreen(viewModel = viewModel)
                 Screen.Login -> LoginScreen(viewModel = viewModel)
                 Screen.Register -> RegisterScreen(viewModel = viewModel)
                 Screen.ForgotPassword -> ForgotPasswordScreen(viewModel = viewModel)
