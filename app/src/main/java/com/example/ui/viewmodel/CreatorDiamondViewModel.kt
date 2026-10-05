@@ -17,6 +17,7 @@ import com.example.data.model.UserAccount
 import com.example.data.model.WalletOverview
 import android.content.Intent
 import com.example.auth.FirebaseGoogleAuth
+import com.example.auth.FirebaseUserData
 import com.example.data.remote.FirebaseCloudSync
 import com.example.data.repository.CreatorDiamondRepository
 import com.example.data.repository.OperationResult
@@ -110,8 +111,28 @@ class CreatorDiamondViewModel(
             }
         }
     }
+    init {
+        FirebaseGoogleAuth.currentUser()?.let { user ->
+            viewModelScope.launch {
+                repository.useFirebaseUser(
+                    FirebaseUserData(
+                        uid = user.uid,
+                        name = user.displayName.orEmpty(),
+                        email = user.email.orEmpty(),
+                        photoUrl = user.photoUrl?.toString().orEmpty()
+                    )
+                )
+            }
+        }
+    }
+
+    fun finishSplash() {
+        if (FirebaseGoogleAuth.currentUser() != null) navigateTo(Screen.Home)
+        else navigateTo(Screen.Login)
+    }
+
     // Navigation State
-    private val _currentScreen = MutableStateFlow<Screen>(Screen.Home)
+    private val _currentScreen = MutableStateFlow<Screen>(Screen.Splash)
     val currentScreen: StateFlow<Screen> = _currentScreen.asStateFlow()
 
     private val screenBackStack = mutableListOf<Screen>()
@@ -124,7 +145,7 @@ class CreatorDiamondViewModel(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val walletOverview: StateFlow<WalletOverview> = repository.getWalletOverviewFlow()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), WalletOverview(2450L, 2550L, 100L, 0L, 1))
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), WalletOverview(0L, 0L, 0L, 0L, 0))
 
     val promotions: StateFlow<List<PromotionItem>> = repository.getAllPromotionsFlow()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -313,6 +334,15 @@ class CreatorDiamondViewModel(
                     )
                     _uiEvents.emit("Error: ${result.message}")
                 }
+            }
+        }
+    }
+
+    fun promoteToTopList(promotionId: String) {
+        viewModelScope.launch {
+            when (val result = repository.promoteToTopList(promotionId)) {
+                is OperationResult.Success -> _uiEvents.emit("Top List active for 24 hours. -100 💎")
+                is OperationResult.Error -> _uiEvents.emit(result.message)
             }
         }
     }
