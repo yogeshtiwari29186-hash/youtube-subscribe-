@@ -302,6 +302,22 @@ class CreatorDiamondViewModel(
         }
     }
 
+
+    fun onYouTubeSubscriptionReturn() {
+        viewModelScope.launch {
+            _uiEvents.emit("YouTube se wapas aaye. Subscription verification required hai; verification successful hone par hi +40 💎 milega.")
+        }
+    }
+
+    fun applyVerifiedYouTubeSubscriptionReward(promotionId: String) {
+        viewModelScope.launch {
+            when (val result = repository.grantVerifiedYouTubeSubscriptionReward(promotionId)) {
+                is OperationResult.Success -> _uiEvents.emit("+${result.data} Diamonds added! 💎")
+                is OperationResult.Error -> _uiEvents.emit(result.message)
+            }
+        }
+    }
+
     fun submitReport(reason: String, details: String) {
         val promo = selectedPromotion.value ?: return
         viewModelScope.launch {
