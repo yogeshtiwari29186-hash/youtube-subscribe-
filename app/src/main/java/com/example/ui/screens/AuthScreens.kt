@@ -260,7 +260,7 @@ fun RegisterScreen(viewModel: CreatorDiamondViewModel, modifier: Modifier = Modi
         Spacer(Modifier.height(10.dp)); OutlinedTextField(password,{password=it},label={Text("Password (6+ characters)")},leadingIcon={Icon(Icons.Filled.Lock,null)},singleLine=true,visualTransformation=PasswordVisualTransformation(),modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(12.dp))
         Spacer(Modifier.height(10.dp)); OutlinedTextField(confirm,{confirm=it},label={Text("Confirm Password")},leadingIcon={Icon(Icons.Filled.Lock,null)},singleLine=true,visualTransformation=PasswordVisualTransformation(),modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(12.dp))
         Spacer(Modifier.height(16.dp)); Button({if(!loading&&name.isNotBlank()&&email.isNotBlank()&&password.length>=6&&password==confirm)viewModel.registerWithEmail(name,email,password)},Modifier.fillMaxWidth().height(54.dp),colors=ButtonDefaults.buttonColors(containerColor=DiamondCyan,contentColor=Color(0xFF0A0D14))){Text(if(loading)"Creating..." else "Create Account",fontWeight=FontWeight.Bold)}
-        Spacer(Modifier.height(10.dp)); Text("50 💎 welcome Diamonds for a new Firebase account.",color=DiamondGold,fontSize=12.sp)
+        Spacer(Modifier.height(10.dp)); Text("200 💎 welcome Diamonds for a new Firebase account.",color=DiamondGold,fontSize=12.sp)
     }
 }
 
