@@ -1,0 +1,21 @@
+{
+  "project_info": {
+    "project_number": "415070974205",
+    "firebase_url": "https://moodhub-8c69e-default-rtdb.firebaseio.com",
+    "project_id": "moodhub-8c69e",
+    "storage_bucket": "moodhub-8c69e.firebasestorage.app"
+  },
+  "client": [{
+    "client_info": {
+      "mobilesdk_app_id": "1:415070974205:android:a97722a93478df80884e94",
+      "android_client_info": {"package_name": "com.my.moodhub"}
+    },
+    "oauth_client": [
+      {"client_id":"415070974205-u3m90esnkunj15ac4k35u8gmhfeik715.apps.googleusercontent.com","client_type":1,"android_info":{"package_name":"com.my.moodhub","certificate_hash":"61ed377e85d386a8dfee6b864bd85b0bfaa5af81"}},
+      {"client_id":"415070974205-6vv81mbgjvi6ifjac54pjeeagmv72d15.apps.googleusercontent.com","client_type":3}
+    ],
+    "api_key":[{"current_key":"AIzaSyD0rEZ1aJdoxNe9KHhr72KTvT-wfIppwqo"}],
+    "services":{"appinvite_service":{"other_platform_oauth_client":[{"client_id":"415070974205-6vv81mbgjvi6ifjac54pjeeagmv72d15.apps.googleusercontent.com","client_type":3}]}}
+  }],
+  "configuration_version":"1"
+}
