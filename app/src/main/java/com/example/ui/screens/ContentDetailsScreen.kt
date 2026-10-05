@@ -1,8 +1,6 @@
 package com.example.ui.screens
 
 import android.content.Intent
-import androidx.core.app.ActivityOptionsCompat
-import androidx.activity.result.IntentSenderRequest
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -65,6 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.example.data.model.PromotionType
@@ -99,6 +98,8 @@ fun ContentDetailsScreen(
     var previewFinished by remember(promo?.promotionId) { mutableStateOf(false) }
     var awaitingYouTubeReturn by remember(promo?.promotionId) { mutableStateOf(false) }
     var verifyingSubscription by remember(promo?.promotionId) { mutableStateOf(false) }
+    var pendingYouTubeAccessToken by remember(promo?.promotionId) { mutableStateOf<String?>(null) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
     val subscriptionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartIntentSenderForResult()
     ) { result ->
@@ -106,25 +107,12 @@ fun ContentDetailsScreen(
             try {
                 val authResult = Identity.getAuthorizationClient(context)
                     .getAuthorizationResultFromIntent(result.data)
-                val token = authResult.accessToken
-                if (token.isNullOrBlank()) {
+                pendingYouTubeAccessToken = authResult.accessToken
+                if (authResult.accessToken.isNullOrBlank()) {
                     verifyingSubscription = false
                     viewModel.onYouTubeSubscriptionReturn()
                 } else {
-                    verifyingSubscription = true
-                    kotlinx.coroutines.MainScope().launch {
-                        val subscribed = YouTubeSubscriptionVerifier.isSubscribed(
-                            accessToken = token,
-                            targetVideoId = promo?.takeIf { it.type == PromotionType.YOUTUBE_VIDEO }?.targetId,
-                            targetChannelId = promo?.takeIf { it.type == PromotionType.YOUTUBE_CHANNEL }?.targetId
-                        )
-                        verifyingSubscription = false
-                        if (subscribed && promo != null) {
-                            viewModel.applyVerifiedYouTubeSubscriptionReward(promo.promotionId)
-                        } else {
-                            viewModel.onYouTubeSubscriptionReturn()
-                        }
-                    }
+                    YouTubeUtils.openOfficialYouTube(context, promo?.targetUrl.orEmpty())
                 }
             } catch (_: Exception) {
                 verifyingSubscription = false
@@ -135,13 +123,27 @@ fun ContentDetailsScreen(
             viewModel.onYouTubeSubscriptionReturn()
         }
     }
+
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    DisposableEffect(lifecycleOwner, awaitingYouTubeReturn, promo?.promotionId) {
+    DisposableEffect(lifecycleOwner, pendingYouTubeAccessToken, promo?.promotionId) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME && awaitingYouTubeReturn) {
-                awaitingYouTubeReturn = false
-                viewModel.onYouTubeSubscriptionReturn()
+            if (event == Lifecycle.Event.ON_RESUME) {
+                val token = pendingYouTubeAccessToken
+                if (!token.isNullOrBlank() && promo != null) {
+                    pendingYouTubeAccessToken = null
+                    verifyingSubscription = true
+                    scope.launch {
+                        val subscribed = YouTubeSubscriptionVerifier.isSubscribed(
+                            accessToken = token,
+                            targetVideoId = promo.takeIf { it.type == PromotionType.YOUTUBE_VIDEO }?.targetId,
+                            targetChannelId = promo.takeIf { it.type == PromotionType.YOUTUBE_CHANNEL }?.targetId
+                        )
+                        verifyingSubscription = false
+                        if (subscribed) viewModel.applyVerifiedYouTubeSubscriptionReward(promo.promotionId)
+                        else viewModel.onYouTubeSubscriptionReturn()
+                    }
+                }
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -392,7 +394,6 @@ fun ContentDetailsScreen(
             item {
                 Button(
                     onClick = {
-                        awaitingYouTubeReturn = true
                         val task = YouTubeSubscriptionVerifier.requestAuthorization(context)
                         task.addOnSuccessListener { authResult ->
                             if (authResult.hasResolution()) {
@@ -400,10 +401,13 @@ fun ContentDetailsScreen(
                                     IntentSenderRequest.Builder(authResult.pendingIntent!!.intentSender).build()
                                 )
                             } else {
-                                YouTubeUtils.openOfficialYouTube(context, promo.targetUrl)
+                                pendingYouTubeAccessToken = authResult.accessToken
+                                if (!authResult.accessToken.isNullOrBlank()) {
+                                    YouTubeUtils.openOfficialYouTube(context, promo.targetUrl)
+                                }
                             }
                         }.addOnFailureListener {
-                            YouTubeUtils.openOfficialYouTube(context, promo.targetUrl)
+                            viewModel.onYouTubeSubscriptionReturn()
                         }
                     },
                     modifier = Modifier
