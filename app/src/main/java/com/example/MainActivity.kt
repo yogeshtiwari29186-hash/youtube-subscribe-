@@ -133,6 +133,7 @@ fun CreatorDiamondApp(
         ) {
             when (currentScreen) {
                 Screen.Splash -> SplashScreen(onFinished = { viewModel.finishSplash() })
+                Screen.YouTubeAuthorization -> YouTubeAuthorizationScreen(onAuthorized = { viewModel.finishYouTubeAuthorization() })
                 Screen.Onboarding -> OnboardingScreen(viewModel = viewModel)
                 Screen.ChannelSetup -> ChannelSetupScreen(viewModel = viewModel)
                 Screen.QuickVideoPromotion -> QuickVideoPromotionScreen(viewModel = viewModel)
