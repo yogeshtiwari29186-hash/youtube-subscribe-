@@ -1,6 +1,9 @@
 package com.example.ui.screens
 
 import android.content.Intent
+import android.webkit.JavascriptInterface
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -56,6 +59,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -80,6 +84,31 @@ import com.example.ui.viewmodel.CreatorDiamondViewModel
 import com.example.ui.viewmodel.Screen
 import com.example.util.YouTubeUtils
 
+private const val REQUIRED_WATCH_SECONDS = 50
+
+private class YouTubePlaybackBridge(private val onStateChanged: (Int) -> Unit) {
+    @JavascriptInterface
+    fun onPlayerState(state: Int) {
+        onStateChanged(state)
+    }
+}
+
+private fun youtubeEmbedHtml(videoId: String): String = """
+<!doctype html>
+<html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<style>html,body,#player{margin:0;width:100%;height:100%;background:#000;overflow:hidden}</style>
+</head><body><div id="player"></div>
+<script>
+var tag=document.createElement('script'); tag.src='https://www.youtube.com/iframe_api'; document.head.appendChild(tag);
+var player;
+function onYouTubeIframeAPIReady(){
+  player=new YT.Player('player',{videoId:'VIDEO_ID',playerVars:{autoplay:0,controls:1,playsinline:1,rel:0,modestbranding:1},events:{onStateChange:function(e){
+    if(window.AndroidPlayback){ AndroidPlayback.onPlayerState(e.data); }
+  }}});
+}
+</script></body></html>
+""".replace("VIDEO_ID", videoId)
+
 @Composable
 fun ContentDetailsScreen(
     viewModel: CreatorDiamondViewModel,
@@ -87,17 +116,19 @@ fun ContentDetailsScreen(
 ) {
     val promo = viewModel.selectedPromotion.collectAsState().value
     val context = LocalContext.current
-    var previewSecondsLeft by remember(promo?.promotionId) { mutableStateOf(40) }
-    var previewFinished by remember(promo?.promotionId) { mutableStateOf(false) }
-    LaunchedEffect(promo?.promotionId) {
-        if (promo?.type == PromotionType.YOUTUBE_VIDEO) {
-            previewSecondsLeft = 40
-            previewFinished = false
-            repeat(40) {
+    var watchSeconds by remember(promo?.promotionId) { mutableStateOf(0) }
+    var isVideoPlaying by remember(promo?.promotionId) { mutableStateOf(false) }
+    val videoId = remember(promo?.promotionId, promo?.targetUrl) {
+        promo?.let { YouTubeUtils.parseVideoUrl(it.targetUrl)?.videoId }
+    }
+    val previewFinished = watchSeconds >= REQUIRED_WATCH_SECONDS
+
+    LaunchedEffect(promo?.promotionId, isVideoPlaying) {
+        if (promo?.type == PromotionType.YOUTUBE_VIDEO && isVideoPlaying && !previewFinished) {
+            while (watchSeconds < REQUIRED_WATCH_SECONDS && isVideoPlaying) {
                 delay(1000)
-                previewSecondsLeft = (40 - it - 1).coerceAtLeast(0)
+                if (isVideoPlaying) watchSeconds = (watchSeconds + 1).coerceAtMost(REQUIRED_WATCH_SECONDS)
             }
-            previewFinished = true
         }
     }
 
@@ -124,73 +155,59 @@ fun ContentDetailsScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Large Thumbnail / Video Preview
             item {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(16f / 9f)
-                        .clip(RoundedCornerShape(18.dp))
-                        .border(1.dp, DarkBorderGlow, RoundedCornerShape(18.dp))
-                        .clickable {
-                            YouTubeUtils.openOfficialYouTube(context, promo.targetUrl)
-                        }
-                ) {
-                    AsyncImage(
-                        model = promo.thumbnailUrl,
-                        contentDescription = promo.title,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(
-                                Brush.verticalGradient(
-                                    listOf(Color(0x60000000), Color.Transparent, Color(0xCC0A0D14))
-                                )
-                            )
-                    )
-
-                    // Center Play Button
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .size(60.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xB3000000))
-                            .border(2.dp, DiamondCyan, CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.PlayArrow,
-                            contentDescription = "Watch",
-                            tint = Color.White,
-                            modifier = Modifier.size(36.dp)
-                        )
-                    }
-
-                    // Platform Tag
-                    Surface(
-                        color = Color(0xCCFF0000),
-                        shape = RoundedCornerShape(6.dp),
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(12.dp)
-                    ) {
-                        Text(
-                            text = when (promo.type) {
-                                PromotionType.YOUTUBE_VIDEO -> "YouTube Video"
-                                PromotionType.YOUTUBE_CHANNEL -> "YouTube Channel"
-                                PromotionType.CREATOR_PROFILE -> "Creator Profile"
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    if (promo.type == PromotionType.YOUTUBE_VIDEO && videoId != null) {
+                        AndroidView(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(16f / 9f)
+                                .clip(RoundedCornerShape(18.dp))
+                                .border(1.dp, DarkBorderGlow, RoundedCornerShape(18.dp)),
+                            factory = { ctx ->
+                                WebView(ctx).apply {
+                                    settings.javaScriptEnabled = true
+                                    settings.domStorageEnabled = true
+                                    settings.mediaPlaybackRequiresUserGesture = true
+                                    webViewClient = WebViewClient()
+                                    addJavascriptInterface(
+                                        YouTubePlaybackBridge { state ->
+                                            isVideoPlaying = state == 1
+                                        },
+                                        "AndroidPlayback"
+                                    )
+                                    loadDataWithBaseURL(
+                                        "https://www.youtube.com",
+                                        youtubeEmbedHtml(videoId),
+                                        "text/html",
+                                        "UTF-8",
+                                        null
+                                    )
+                                }
                             },
-                            color = Color.White,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            update = { }
+                        )
+                    } else {
+                        AsyncImage(
+                            model = promo.thumbnailUrl,
+                            contentDescription = promo.title,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(16f / 9f)
+                                .clip(RoundedCornerShape(18.dp))
                         )
                     }
+
+                    Text(
+                        text = if (previewFinished)
+                            "50-second watch completed ✓"
+                        else
+                            "Watch in the app: " + watchSeconds + "s / " + REQUIRED_WATCH_SECONDS + "s",
+                        color = if (previewFinished) Color(0xFF55E39A) else TextSecondary,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    )
                 }
             }
 
@@ -328,7 +345,32 @@ fun ContentDetailsScreen(
                 }
             }
 
-            // Open the creator's official YouTube content directly.\n            item {\n                Button(\n                    onClick = { YouTubeUtils.openOfficialYouTube(context, promo.targetUrl) },\n                    modifier = Modifier\n                        .fillMaxWidth()\n                        .height(52.dp)\n                        .testTag("details_watch_official_btn"),\n                    colors = ButtonDefaults.buttonColors(\n                        containerColor = Color(0xFFFF0000),\n                        contentColor = Color.White\n                    ),\n                    shape = RoundedCornerShape(12.dp)\n                ) {\n                    Row(\n                        verticalAlignment = Alignment.CenterVertically,\n                        horizontalArrangement = Arrangement.spacedBy(8.dp)\n                    ) {\n                        Icon(Icons.Filled.PlayArrow, contentDescription = null)\n                        Text(\n                            text = when (promo.type) {\n                                PromotionType.YOUTUBE_VIDEO, PromotionType.YOUTUBE_CHANNEL ->\n                                    "Open Official YouTube ↗"\n                                PromotionType.CREATOR_PROFILE ->\n                                    "Open Official YouTube ↗"\n                            },\n                            fontWeight = FontWeight.Bold,\n                            fontSize = 15.sp\n                        )\n                    }\n                }\n            }\n\n            // Report and Compliance
+            // Open the creator's official YouTube content directly.\n            item {\n                Button(\n                    onClick = { YouTubeUtils.openOfficialYouTube(context, promo.targetUrl) },\n                    modifier = Modifier\n                        .fillMaxWidth()\n                        .height(52.dp)\n                        .testTag("details_watch_official_btn"),\n                    colors = ButtonDefaults.buttonColors(\n                        containerColor = Color(0xFFFF0000),\n                        contentColor = Color.White\n                    ),\n                    shape = RoundedCornerShape(12.dp)\n                ) {\n                    Row(\n                        verticalAlignment = Alignment.CenterVertically,\n                        horizontalArrangement = Arrangement.spacedBy(8.dp)\n                    ) {\n                        Icon(Icons.Filled.PlayArrow, contentDescription = null)\n                        Text(\n                            text = when (promo.type) {\n                                PromotionType.YOUTUBE_VIDEO, PromotionType.YOUTUBE_CHANNEL ->\n                                    "Open Official YouTube ↗"\n                                PromotionType.CREATOR_PROFILE ->\n                                    "Open Official YouTube ↗"\n                            },\n                            fontWeight = FontWeight.Bold,\n                            fontSize = 15.sp\n                        )\n                    }\n                }\n            }\n\n            item {
+                Button(
+                    onClick = { YouTubeUtils.openOfficialYouTube(context, promo.targetUrl) },
+                    enabled = promo.type != PromotionType.YOUTUBE_VIDEO || previewFinished,
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFFF0000),
+                        contentColor = Color.White,
+                        disabledContainerColor = Color(0xFF4A1A1A),
+                        disabledContentColor = Color(0xFFB8B8B8)
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Filled.PlayArrow, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = if (promo.type == PromotionType.YOUTUBE_VIDEO && !previewFinished)
+                            "Watch 50s to unlock YouTube"
+                        else
+                            "Open Official YouTube ↗",
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            // Report and Compliance
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
