@@ -201,7 +201,6 @@ fun ContentDetailsScreen(
                                     settings.domStorageEnabled = true
                                     settings.mediaPlaybackRequiresUserGesture = true
                                     settings.loadsImagesAutomatically = true
-                                    settings.mediaContentAccess = true
                                     settings.allowContentAccess = true
                                     settings.userAgentString =
                                         settings.userAgentString + " YouTubeAndroidPlayer"
