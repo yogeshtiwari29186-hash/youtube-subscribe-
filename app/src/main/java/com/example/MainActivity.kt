@@ -53,8 +53,6 @@ import com.example.ui.screens.TaskDetailsScreen
 import com.example.ui.screens.TermsScreen
 import com.example.ui.screens.TransactionHistoryScreen
 import com.example.ui.screens.WalletScreen
-import com.example.ui.screens.YouTubeAuthorizationScreen
-import com.example.ui.screens.YouTubeAuthorizationScreen
 import com.example.ui.theme.DarkBackground
 import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.viewmodel.CreatorDiamondViewModel
@@ -135,7 +133,6 @@ fun CreatorDiamondApp(
         ) {
             when (currentScreen) {
                 Screen.Splash -> SplashScreen(onFinished = { viewModel.finishSplash() })
-                Screen.YouTubeAuthorization -> YouTubeAuthorizationScreen(onAuthorized = { viewModel.finishYouTubeAuthorization() })
                 Screen.Onboarding -> OnboardingScreen(viewModel = viewModel)
                 Screen.ChannelSetup -> ChannelSetupScreen(viewModel = viewModel)
                 Screen.QuickVideoPromotion -> QuickVideoPromotionScreen(viewModel = viewModel)
