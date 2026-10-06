@@ -1,11 +1,10 @@
 package com.example.ui.screens
 
 import android.app.Activity
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import android.app.Activity
+import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import android.content.Context
 import com.google.android.gms.auth.api.identity.Identity
 import com.example.util.YouTubeSubscriptionVerifier
@@ -158,7 +157,12 @@ fun YouTubeAuthorizationScreen(
     val context = androidx.compose.ui.platform.LocalContext.current
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(Unit) {\n        val alreadyAuthorized = context.getSharedPreferences("youtube_auth", Context.MODE_PRIVATE)\n            .getBoolean("authorized", false)\n        if (alreadyAuthorized) onAuthorized()\n    }\n
+    LaunchedEffect(Unit) {
+        val alreadyAuthorized = context.getSharedPreferences("youtube_auth", Context.MODE_PRIVATE)
+            .getBoolean("authorized", false)
+        if (alreadyAuthorized) onAuthorized()
+    }
+
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartIntentSenderForResult()
     ) { result ->
