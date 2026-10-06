@@ -156,32 +156,48 @@ fun YouTubeAuthorizationScreen(
     val context = androidx.compose.ui.platform.LocalContext.current
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+
     LaunchedEffect(Unit) {
-        val alreadyAuthorized = context.getSharedPreferences("youtube_auth", Context.MODE_PRIVATE)
-            .getBoolean("authorized", false)
-        if (alreadyAuthorized) onAuthorized()
+        val prefs = context.getSharedPreferences("youtube_auth", Context.MODE_PRIVATE)
+        if (prefs.getBoolean("authorized", false)) onAuthorized()
     }
 
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartIntentSenderForResult()
     ) { result ->
         loading = false
-        if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+
+        // AuthorizationClient can put a failure in the returned intent. Always try
+        // to decode it before treating RESULT_CANCELED as a generic cancellation.
+        if (result.data != null) {
             try {
                 val authResult = Identity.getAuthorizationClient(context)
                     .getAuthorizationResultFromIntent(result.data)
-                if (!authResult.accessToken.isNullOrBlank()) {
+
+                val token = authResult.accessToken
+                if (!token.isNullOrBlank()) {
                     context.getSharedPreferences("youtube_auth", Context.MODE_PRIVATE)
-                        .edit().putBoolean("authorized", true).apply()
+                        .edit()
+                        .putBoolean("authorized", true)
+                        .apply()
                     onAuthorized()
                 } else {
-                    error = "YouTube authorization was not completed."
+                    error = "Google did not return a YouTube access token. Please try again."
                 }
+                return@rememberLauncherForActivityResult
+            } catch (e: com.google.android.gms.common.api.ApiException) {
+                error = "YouTube authorization failed (Google code ${e.statusCode}). Check the app's Google OAuth/YouTube API setup."
+                return@rememberLauncherForActivityResult
             } catch (e: Exception) {
-                error = "Authorization failed. Please try again."
+                error = "YouTube authorization failed: ${e.message ?: "unknown error"}"
+                return@rememberLauncherForActivityResult
             }
+        }
+
+        error = if (result.resultCode == Activity.RESULT_CANCELED) {
+            "Authorization was cancelled or Google closed the permission screen. Tap Connect YouTube and complete the Google permission step."
         } else {
-            error = "Authorization cancelled."
+            "Authorization did not return a result (code ${result.resultCode})."
         }
     }
 
@@ -192,20 +208,28 @@ fun YouTubeAuthorizationScreen(
     ) {
         Icon(Icons.Filled.Security, null, tint = DiamondCyan, modifier = Modifier.size(72.dp))
         Spacer(Modifier.height(22.dp))
-        Text("Connect YouTube", style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+        Text(
+            "Connect YouTube",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.ExtraBold,
+            color = TextPrimary
+        )
         Spacer(Modifier.height(10.dp))
         Text(
-            "Connect your YouTube account once. This lets the app verify your own YouTube subscriptions when you return from official YouTube.",
-            color = TextSecondary, lineHeight = 22.sp
+            "Connect your YouTube account once. This gives the app read-only access to verify your own YouTube subscriptions when you return from official YouTube.",
+            color = TextSecondary,
+            lineHeight = 22.sp
         )
         Spacer(Modifier.height(24.dp))
         GlassCard(modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(18.dp)) {
                 Text("What permission is requested?", fontWeight = FontWeight.Bold, color = TextPrimary)
                 Spacer(Modifier.height(8.dp))
-                Text("YouTube read-only access. The app cannot subscribe or unsubscribe on your behalf.",
-                    color = TextSecondary, fontSize = 13.sp)
+                Text(
+                    "YouTube read-only access. The app cannot subscribe or unsubscribe on your behalf.",
+                    color = TextSecondary,
+                    fontSize = 13.sp
+                )
             }
         }
         Spacer(Modifier.height(24.dp))
@@ -213,33 +237,53 @@ fun YouTubeAuthorizationScreen(
             onClick = {
                 loading = true
                 error = null
+
                 YouTubeSubscriptionVerifier.requestAuthorization(context)
                     .addOnSuccessListener { authResult ->
                         if (authResult.hasResolution()) {
-                            launcher.launch(
-                                IntentSenderRequest.Builder(
-                                    authResult.pendingIntent!!.intentSender
-                                ).build()
-                            )
-                        } else if (!authResult.accessToken.isNullOrBlank()) {
-                            context.getSharedPreferences("youtube_auth", Context.MODE_PRIVATE)
-                                .edit().putBoolean("authorized", true).apply()
-                            loading = false
-                            onAuthorized()
+                            val pendingIntent = authResult.pendingIntent
+                            if (pendingIntent == null) {
+                                loading = false
+                                error = "Google returned no authorization screen. Please check Google Play Services and OAuth configuration."
+                            } else {
+                                try {
+                                    launcher.launch(
+                                        IntentSenderRequest.Builder(pendingIntent.intentSender).build()
+                                    )
+                                } catch (e: Exception) {
+                                    loading = false
+                                    error = "Could not open Google authorization: ${e.message ?: "unknown error"}"
+                                }
+                            }
                         } else {
-                            loading = false
-                            error = "No YouTube authorization token was returned."
+                            val token = authResult.accessToken
+                            if (!token.isNullOrBlank()) {
+                                context.getSharedPreferences("youtube_auth", Context.MODE_PRIVATE)
+                                    .edit()
+                                    .putBoolean("authorized", true)
+                                    .apply()
+                                loading = false
+                                onAuthorized()
+                            } else {
+                                loading = false
+                                error = "Google returned no YouTube access token."
+                            }
                         }
                     }
-                    .addOnFailureListener {
+                    .addOnFailureListener { e ->
                         loading = false
-                        error = it.message ?: "Authorization failed."
+                        error = if (e is com.google.android.gms.common.api.ApiException) {
+                            "YouTube authorization failed (Google code ${e.statusCode}). Check package/SHA-1 OAuth configuration and that YouTube Data API v3 is enabled."
+                        } else {
+                            "YouTube authorization failed: ${e.message ?: "unknown error"}"
+                        }
                     }
             },
             enabled = !loading,
             modifier = Modifier.fillMaxWidth().height(54.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = DiamondCyan, contentColor = Color(0xFF0A0D14)
+                containerColor = DiamondCyan,
+                contentColor = Color(0xFF0A0D14)
             ),
             shape = RoundedCornerShape(12.dp)
         ) {
@@ -247,11 +291,10 @@ fun YouTubeAuthorizationScreen(
         }
         error?.let {
             Spacer(Modifier.height(12.dp))
-            Text(it, color = ErrorRed, fontSize = 13.sp)
+            Text(it, color = ErrorRed, fontSize = 13.sp, lineHeight = 18.sp)
         }
     }
 }
-
 @Composable
 fun OnboardingScreen(
     viewModel: CreatorDiamondViewModel,
