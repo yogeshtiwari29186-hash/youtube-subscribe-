@@ -180,7 +180,7 @@ fun ContentDetailsScreen(
                             .padding(12.dp)
                     ) {
                         Text(
-                            text = if (verifyingSubscription) "Verifying YouTube Subscription…" else when (promo.type) {
+                            text = when (promo.type) {
                                 PromotionType.YOUTUBE_VIDEO -> "YouTube Video"
                                 PromotionType.YOUTUBE_CHANNEL -> "YouTube Channel"
                                 PromotionType.CREATOR_PROFILE -> "Creator Profile"
