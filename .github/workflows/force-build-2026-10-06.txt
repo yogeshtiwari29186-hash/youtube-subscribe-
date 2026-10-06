@@ -1,0 +1,1 @@
+Force GitHub Actions build trigger for the latest Android APK changes.
