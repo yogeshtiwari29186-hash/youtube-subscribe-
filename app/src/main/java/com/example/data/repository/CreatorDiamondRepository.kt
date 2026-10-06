@@ -793,15 +793,6 @@ class CreatorDiamondRepository(
             // Seed Tasks
             val tasks = listOf(
                 EarnTask(
-                    taskId = "task_daily",
-                    title = "Daily Check-in",
-                    description = "Claim your daily diamond reward to build your consecutive login streak.",
-                    reward = 10L,
-                    category = "DAILY",
-                    isDaily = true,
-                    actionType = "DAILY_CHECKIN"
-                ),
-                EarnTask(
                     taskId = "task_profile",
                     title = "Profile Completion",
                     description = "Add a bio, display name, and avatar to complete your creator identity.",
