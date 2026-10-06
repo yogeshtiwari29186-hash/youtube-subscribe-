@@ -34,7 +34,6 @@ import kotlinx.coroutines.launch
 
 sealed class Screen(val route: String) {
     object Splash : Screen("splash")
-    object YouTubeAuthorization : Screen("youtube_authorization")
     object Onboarding : Screen("onboarding")
     object ChannelSetup : Screen("channel_setup")
     object QuickVideoPromotion : Screen("quick_video_promotion")
@@ -147,10 +146,6 @@ class CreatorDiamondViewModel(
     }
 
     fun finishSplash() {
-        navigateTo(Screen.YouTubeAuthorization)
-    }
-
-    fun finishYouTubeAuthorization() {
         if (FirebaseGoogleAuth.currentUser() != null) navigateTo(Screen.Home)
         else navigateTo(Screen.Login)
     }
@@ -386,18 +381,6 @@ class CreatorDiamondViewModel(
         }
     }
 
-
-    fun onYouTubeSubscriptionReturn() {
-        viewModelScope.launch {
-            _uiEvents.emit("YouTube se wapas aaye. Subscription verification complete nahi hua.")
-        }
-    }
-
-    fun onYouTubeSubscriptionVerified() {
-        viewModelScope.launch {
-            _uiEvents.emit("YouTube subscription verified successfully.")
-        }
-    }
 
     fun submitReport(reason: String, details: String) {
         val promo = selectedPromotion.value ?: return
