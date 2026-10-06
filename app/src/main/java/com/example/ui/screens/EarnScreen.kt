@@ -71,9 +71,6 @@ import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 import com.example.ui.viewmodel.CreatorDiamondViewModel
 import com.example.ui.viewmodel.Screen
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 @Composable
 fun EarnScreen(
@@ -85,7 +82,6 @@ fun EarnScreen(
     val wallet by viewModel.walletOverview.collectAsState()
     val notifications by viewModel.notifications.collectAsState()
     val unreadNotifs = notifications.count { !it.isRead }
-    val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
 
     Column(
         modifier = modifier
@@ -108,94 +104,6 @@ fun EarnScreen(
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // Daily Streak Header Card
-            item {
-                GlassCard(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("daily_streak_card"),
-                    borderGlow = true
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.FlashOn,
-                                    contentDescription = null,
-                                    tint = DiamondGold,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Text(
-                                    text = "DAILY STREAK",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = DiamondGold,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "${user?.checkInStreak ?: 1} Days Active 🔥",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = TextPrimary
-                            )
-                            Text(
-                                text = "Login consecutively to maintain bonus tier multipliers",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextSecondary,
-                                fontSize = 11.sp
-                            )
-                        }
-
-                        val isCheckedInToday = user?.lastCheckInDate == todayStr
-                        if (isCheckedInToday) {
-                            Surface(
-                                shape = RoundedCornerShape(10.dp),
-                                color = SuccessGreen.copy(alpha = 0.2f),
-                                border = BorderStroke(1.dp, SuccessGreen)
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.Done,
-                                        contentDescription = null,
-                                        tint = SuccessGreen,
-                                        modifier = Modifier.size(14.dp)
-                                    )
-                                    Text(
-                                        text = "Claimed",
-                                        color = SuccessGreen,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 11.sp
-                                    )
-                                }
-                            }
-                        } else {
-                            Button(
-                                onClick = { viewModel.claimTaskReward("task_daily") },
-                                colors = ButtonDefaults.buttonColors(containerColor = DiamondCyan, contentColor = Color(0xFF0A0D14)),
-                                shape = RoundedCornerShape(10.dp),
-                                modifier = Modifier.testTag("claim_daily_checkin_button")
-                            ) {
-                                Text("+10 💎", fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-                }
-            }
-
             // Compliance policy notice
             item {
                 ComplianceNoticeCard()
@@ -212,12 +120,8 @@ fun EarnScreen(
             }
 
             // Tasks List
-            items(tasks) { task ->
-                val isCompleted = if (task.isDaily) {
-                    user?.lastCheckInDate == todayStr && task.actionType == "DAILY_CHECKIN"
-                } else {
-                    task.isCompleted
-                }
+            items(tasks.filterNot { it.isDaily }) { task ->
+                val isCompleted = task.isCompleted
 
                 TaskCard(
                     task = task,
