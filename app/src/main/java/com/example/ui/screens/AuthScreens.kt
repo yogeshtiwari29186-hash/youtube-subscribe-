@@ -5,7 +5,6 @@ import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import android.content.Context
 import com.google.android.gms.auth.api.identity.Identity
 import com.example.util.YouTubeSubscriptionVerifier
 import com.example.auth.FirebaseGoogleAuth
