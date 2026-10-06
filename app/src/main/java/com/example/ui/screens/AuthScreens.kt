@@ -3,6 +3,12 @@ package com.example.ui.screens
 import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import android.app.Activity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
+import android.content.Context
+import com.google.android.gms.auth.api.identity.Identity
+import com.example.util.YouTubeSubscriptionVerifier
 import com.example.auth.FirebaseGoogleAuth
 
 import androidx.compose.animation.core.Animatable
@@ -140,6 +146,105 @@ fun SplashScreen(
                 color = DiamondCyan,
                 fontWeight = FontWeight.SemiBold
             )
+        }
+    }
+}
+
+@Composable
+fun YouTubeAuthorizationScreen(
+    onAuthorized: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var loading by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    val launcher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        loading = false
+        if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+            try {
+                val authResult = Identity.getAuthorizationClient(context)
+                    .getAuthorizationResultFromIntent(result.data)
+                if (!authResult.accessToken.isNullOrBlank()) {
+                    context.getSharedPreferences("youtube_auth", Context.MODE_PRIVATE)
+                        .edit().putBoolean("authorized", true).apply()
+                    onAuthorized()
+                } else {
+                    error = "YouTube authorization was not completed."
+                }
+            } catch (e: Exception) {
+                error = "Authorization failed. Please try again."
+            }
+        } else {
+            error = "Authorization cancelled."
+        }
+    }
+
+    Column(
+        modifier = modifier.fillMaxSize().background(DarkBackground).padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(Icons.Filled.Security, null, tint = DiamondCyan, modifier = Modifier.size(72.dp))
+        Spacer(Modifier.height(22.dp))
+        Text("Connect YouTube", style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+        Spacer(Modifier.height(10.dp))
+        Text(
+            "Connect your YouTube account once. This lets the app verify your own YouTube subscriptions when you return from official YouTube.",
+            color = TextSecondary, lineHeight = 22.sp
+        )
+        Spacer(Modifier.height(24.dp))
+        GlassCard(modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(18.dp)) {
+                Text("What permission is requested?", fontWeight = FontWeight.Bold, color = TextPrimary)
+                Spacer(Modifier.height(8.dp))
+                Text("YouTube read-only access. The app cannot subscribe or unsubscribe on your behalf.",
+                    color = TextSecondary, fontSize = 13.sp)
+            }
+        }
+        Spacer(Modifier.height(24.dp))
+        Button(
+            onClick = {
+                loading = true
+                error = null
+                YouTubeSubscriptionVerifier.requestAuthorization(context)
+                    .addOnSuccessListener { authResult ->
+                        if (authResult.hasResolution()) {
+                            launcher.launch(
+                                IntentSenderRequest.Builder(
+                                    authResult.pendingIntent!!.intentSender
+                                ).build()
+                            )
+                        } else if (!authResult.accessToken.isNullOrBlank()) {
+                            context.getSharedPreferences("youtube_auth", Context.MODE_PRIVATE)
+                                .edit().putBoolean("authorized", true).apply()
+                            loading = false
+                            onAuthorized()
+                        } else {
+                            loading = false
+                            error = "No YouTube authorization token was returned."
+                        }
+                    }
+                    .addOnFailureListener {
+                        loading = false
+                        error = it.message ?: "Authorization failed."
+                    }
+            },
+            enabled = !loading,
+            modifier = Modifier.fillMaxWidth().height(54.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = DiamondCyan, contentColor = Color(0xFF0A0D14)
+            ),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Text(if (loading) "Connecting..." else "Connect YouTube", fontWeight = FontWeight.Bold)
+        }
+        error?.let {
+            Spacer(Modifier.height(12.dp))
+            Text(it, color = ErrorRed, fontSize = 13.sp)
         }
     }
 }
