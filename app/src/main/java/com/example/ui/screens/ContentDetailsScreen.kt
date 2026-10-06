@@ -324,19 +324,23 @@ fun ContentDetailsScreen(
                 }
             }
 
-            // 40-second preview state + official YouTube action
+            // Watch-progress status and official YouTube action.
             if (promo.type == PromotionType.YOUTUBE_VIDEO) {
                 item {
                     GlassCard(modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
-                                text = if (previewFinished) "Preview complete" else "Preview in progress",
+                                text = if (previewFinished) "50-second watch complete" else "Watch the video in the app",
                                 fontWeight = FontWeight.Bold,
                                 color = TextPrimary
                             )
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
-                                text = if (previewFinished) "You can continue watching on YouTube." else "40-second preview timer: ${previewSecondsLeft}s",
+                                text = if (previewFinished) {
+                                    "You can continue on the official YouTube channel."
+                                } else {
+                                    "Watched: " + watchSeconds + " / " + REQUIRED_WATCH_SECONDS + " seconds"
+                                },
                                 color = TextSecondary,
                                 fontSize = 13.sp
                             )
@@ -345,11 +349,14 @@ fun ContentDetailsScreen(
                 }
             }
 
-            // Open the creator's official YouTube content directly.\n            item {\n                Button(\n                    onClick = { YouTubeUtils.openOfficialYouTube(context, promo.targetUrl) },\n                    modifier = Modifier\n                        .fillMaxWidth()\n                        .height(52.dp)\n                        .testTag("details_watch_official_btn"),\n                    colors = ButtonDefaults.buttonColors(\n                        containerColor = Color(0xFFFF0000),\n                        contentColor = Color.White\n                    ),\n                    shape = RoundedCornerShape(12.dp)\n                ) {\n                    Row(\n                        verticalAlignment = Alignment.CenterVertically,\n                        horizontalArrangement = Arrangement.spacedBy(8.dp)\n                    ) {\n                        Icon(Icons.Filled.PlayArrow, contentDescription = null)\n                        Text(\n                            text = when (promo.type) {\n                                PromotionType.YOUTUBE_VIDEO, PromotionType.YOUTUBE_CHANNEL ->\n                                    "Open Official YouTube ↗"\n                                PromotionType.CREATOR_PROFILE ->\n                                    "Open Official YouTube ↗"\n                            },\n                            fontWeight = FontWeight.Bold,\n                            fontSize = 15.sp\n                        )\n                    }\n                }\n            }\n\n            item {
+            item {
                 Button(
                     onClick = { YouTubeUtils.openOfficialYouTube(context, promo.targetUrl) },
                     enabled = promo.type != PromotionType.YOUTUBE_VIDEO || previewFinished,
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp)
+                        .testTag("details_watch_official_btn"),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color(0xFFFF0000),
                         contentColor = Color.White,
@@ -361,10 +368,11 @@ fun ContentDetailsScreen(
                     Icon(Icons.Filled.PlayArrow, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (promo.type == PromotionType.YOUTUBE_VIDEO && !previewFinished)
+                        text = if (promo.type == PromotionType.YOUTUBE_VIDEO && !previewFinished) {
                             "Watch 50s to unlock YouTube"
-                        else
-                            "Open Official YouTube ↗",
+                        } else {
+                            "Open Official YouTube ↗"
+                        },
                         fontWeight = FontWeight.Bold
                     )
                 }
