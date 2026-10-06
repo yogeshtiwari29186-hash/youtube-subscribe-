@@ -158,7 +158,7 @@ fun YouTubeAuthorizationScreen(
     val context = androidx.compose.ui.platform.LocalContext.current
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
-
+    LaunchedEffect(Unit) {\n        val alreadyAuthorized = context.getSharedPreferences("youtube_auth", Context.MODE_PRIVATE)\n            .getBoolean("authorized", false)\n        if (alreadyAuthorized) onAuthorized()\n    }\n
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartIntentSenderForResult()
     ) { result ->
