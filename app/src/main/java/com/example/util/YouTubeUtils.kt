@@ -135,14 +135,15 @@ object YouTubeUtils {
      * Complies with YouTube policy by directing the viewer to the official destination.
      */
     fun openOfficialYouTube(context: Context, url: String) {
+        val uri = Uri.parse(url)
         try {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+            val youtubeIntent = Intent(Intent.ACTION_VIEW, uri).apply {
+                setPackage("com.google.android.youtube")
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
             }
-            context.startActivity(intent)
+            context.startActivity(youtubeIntent)
         } catch (_: Exception) {
-            // Intent fallback to browser
-            val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+            val webIntent = Intent(Intent.ACTION_VIEW, uri).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
             }
             context.startActivity(webIntent)
