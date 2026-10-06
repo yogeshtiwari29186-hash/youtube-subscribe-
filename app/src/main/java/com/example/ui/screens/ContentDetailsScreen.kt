@@ -95,20 +95,51 @@ private class YouTubePlaybackBridge(private val onStateChanged: (Int) -> Unit) {
 
 private fun youtubeEmbedHtml(videoId: String): String = """
 <!doctype html>
-<html><head><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<style>html,body,#player{margin:0;width:100%;height:100%;background:#000;overflow:hidden}</style>
-</head><body><div id="player"></div>
+<html>
+<head>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<style>
+html,body,#player{margin:0;padding:0;width:100%;height:100%;background:#000;overflow:hidden}
+</style>
+</head>
+<body>
+<div id="player"></div>
 <script>
-var tag=document.createElement('script'); tag.src='https://www.youtube.com/iframe_api'; document.head.appendChild(tag);
 var player;
-function onYouTubeIframeAPIReady(){
-  player=new YT.Player('player',{videoId:'VIDEO_ID',playerVars:{autoplay:0,controls:1,playsinline:1,rel:0,modestbranding:1},events:{onStateChange:function(e){
-    if(window.AndroidPlayback){ AndroidPlayback.onPlayerState(e.data); }
-  }}});
-}
-</script></body></html>
-""".replace("VIDEO_ID", videoId)
+var tag=document.createElement('script');
+tag.src='https://www.youtube.com/iframe_api';
+document.head.appendChild(tag);
 
+function onYouTubeIframeAPIReady() {
+  player = new YT.Player('player', {
+    videoId: 'VIDEO_ID',
+    width: '100%',
+    height: '100%',
+    playerVars: {
+      autoplay: 0,
+      controls: 1,
+      playsinline: 1,
+      rel: 0,
+      enablejsapi: 1,
+      origin: 'https://www.youtube.com'
+    },
+    events: {
+      onReady: function() {
+        if (window.AndroidPlayback) AndroidPlayback.onPlayerState(-1);
+      },
+      onStateChange: function(e) {
+        if (window.AndroidPlayback) AndroidPlayback.onPlayerState(e.data);
+      },
+      onError: function(e) {
+        if (window.AndroidPlayback) AndroidPlayback.onPlayerState(-100 - e.data);
+      }
+    }
+  });
+}
+</script>
+</body>
+</html>
+""".replace("VIDEO_ID", videoId)
 @Composable
 fun ContentDetailsScreen(
     viewModel: CreatorDiamondViewModel,
@@ -169,6 +200,11 @@ fun ContentDetailsScreen(
                                     settings.javaScriptEnabled = true
                                     settings.domStorageEnabled = true
                                     settings.mediaPlaybackRequiresUserGesture = true
+                                    settings.loadsImagesAutomatically = true
+                                    settings.mediaContentAccess = true
+                                    settings.allowContentAccess = true
+                                    settings.userAgentString =
+                                        settings.userAgentString + " YouTubeAndroidPlayer"
                                     webViewClient = WebViewClient()
                                     addJavascriptInterface(
                                         YouTubePlaybackBridge { state ->
