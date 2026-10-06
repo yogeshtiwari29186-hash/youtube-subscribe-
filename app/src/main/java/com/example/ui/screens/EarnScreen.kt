@@ -280,8 +280,6 @@ fun TaskDetailsScreen(
     modifier: Modifier = Modifier
 ) {
     val task = viewModel.selectedTask.collectAsState().value
-    val user by viewModel.currentUser.collectAsState()
-    val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
 
     Column(
         modifier = modifier
@@ -301,11 +299,7 @@ fun TaskDetailsScreen(
             return
         }
 
-        val isCompleted = if (task.isDaily) {
-            user?.lastCheckInDate == todayStr && task.actionType == "DAILY_CHECKIN"
-        } else {
-            task.isCompleted
-        }
+        val isCompleted = task.isCompleted
 
         LazyColumn(
             modifier = Modifier
