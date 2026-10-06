@@ -18,6 +18,8 @@ object YouTubeSubscriptionVerifier {
         Identity.getAuthorizationClient(context).authorize(
             AuthorizationRequest.builder()
                 .setRequestedScopes(listOf(Scope(YOUTUBE_READONLY_SCOPE)))
+                // Always let the user explicitly choose the Google account.
+                .setPrompt(AuthorizationRequest.Prompt.SELECT_ACCOUNT)
                 .build()
         )
 
