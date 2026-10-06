@@ -142,7 +142,7 @@ fun ContentDetailsScreen(
                             targetChannelId = promo.takeIf { it.type == PromotionType.YOUTUBE_CHANNEL }?.targetId
                         )
                         verifyingSubscription = false
-                        if (subscribed) viewModel.applyVerifiedYouTubeSubscriptionReward(promo.promotionId)
+                        if (subscribed) viewModel.onYouTubeSubscriptionVerified()
                         else viewModel.onYouTubeSubscriptionReturn()
                     }
                 }
