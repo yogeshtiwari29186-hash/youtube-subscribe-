@@ -1,9 +1,6 @@
 package com.example.ui.screens
 
 import android.content.Intent
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.IntentSenderRequest
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -45,7 +42,6 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
@@ -59,16 +55,12 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import com.example.data.model.PromotionType
 import com.example.ui.components.ComplianceNoticeCard
 import com.example.ui.components.CreatorTopBar
@@ -87,8 +79,6 @@ import com.example.ui.theme.TextSecondary
 import com.example.ui.viewmodel.CreatorDiamondViewModel
 import com.example.ui.viewmodel.Screen
 import com.example.util.YouTubeUtils
-import com.example.util.YouTubeSubscriptionVerifier
-import com.google.android.gms.auth.api.identity.Identity
 
 @Composable
 fun ContentDetailsScreen(
@@ -99,59 +89,6 @@ fun ContentDetailsScreen(
     val context = LocalContext.current
     var previewSecondsLeft by remember(promo?.promotionId) { mutableStateOf(40) }
     var previewFinished by remember(promo?.promotionId) { mutableStateOf(false) }
-    var verifyingSubscription by remember(promo?.promotionId) { mutableStateOf(false) }
-    var pendingYouTubeAccessToken by remember(promo?.promotionId) { mutableStateOf<String?>(null) }
-    val scope = androidx.compose.runtime.rememberCoroutineScope()
-    val subscriptionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartIntentSenderForResult()
-    ) { result ->
-        if (result.resultCode == android.app.Activity.RESULT_OK && result.data != null) {
-            try {
-                val authResult = Identity.getAuthorizationClient(context)
-                    .getAuthorizationResultFromIntent(result.data)
-                pendingYouTubeAccessToken = authResult.accessToken
-                if (authResult.accessToken.isNullOrBlank()) {
-                    verifyingSubscription = false
-                    viewModel.onYouTubeSubscriptionReturn()
-                } else {
-                    YouTubeUtils.openOfficialYouTube(context, promo?.targetUrl.orEmpty())
-                }
-            } catch (_: Exception) {
-                verifyingSubscription = false
-                viewModel.onYouTubeSubscriptionReturn()
-            }
-        } else {
-            verifyingSubscription = false
-            viewModel.onYouTubeSubscriptionReturn()
-        }
-    }
-
-    val lifecycleOwner = LocalLifecycleOwner.current
-
-    DisposableEffect(lifecycleOwner, pendingYouTubeAccessToken, promo?.promotionId) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                val token = pendingYouTubeAccessToken
-                if (!token.isNullOrBlank() && promo != null) {
-                    pendingYouTubeAccessToken = null
-                    verifyingSubscription = true
-                    scope.launch {
-                        val subscribed = YouTubeSubscriptionVerifier.isSubscribed(
-                            accessToken = token,
-                            targetVideoId = promo.takeIf { it.type == PromotionType.YOUTUBE_VIDEO }?.targetId,
-                            targetChannelId = promo.takeIf { it.type == PromotionType.YOUTUBE_CHANNEL }?.targetId
-                        )
-                        verifyingSubscription = false
-                        if (subscribed) viewModel.onYouTubeSubscriptionVerified()
-                        else viewModel.onYouTubeSubscriptionReturn()
-                    }
-                }
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
-
     LaunchedEffect(promo?.promotionId) {
         if (promo?.type == PromotionType.YOUTUBE_VIDEO) {
             previewSecondsLeft = 40
@@ -391,57 +328,7 @@ fun ContentDetailsScreen(
                 }
             }
 
-            // Official YouTube action. Subscription rewards require an authorized
-            // verification result; the app never infers a subscription from a public count.
-            item {
-                Button(
-                    onClick = {
-                        val task = YouTubeSubscriptionVerifier.requestAuthorization(context)
-                        task.addOnSuccessListener { authResult ->
-                            if (authResult.hasResolution()) {
-                                subscriptionLauncher.launch(
-                                    IntentSenderRequest.Builder(authResult.pendingIntent!!.intentSender).build()
-                                )
-                            } else {
-                                pendingYouTubeAccessToken = authResult.accessToken
-                                if (!authResult.accessToken.isNullOrBlank()) {
-                                    YouTubeUtils.openOfficialYouTube(context, promo.targetUrl)
-                                }
-                            }
-                        }.addOnFailureListener {
-                            viewModel.onYouTubeSubscriptionReturn()
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp)
-                        .testTag("details_watch_official_btn"),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFFF0000),
-                        contentColor = Color.White
-                    ),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(Icons.Filled.PlayArrow, contentDescription = null)
-                        Text(
-                            text = when (promo.type) {
-                                PromotionType.YOUTUBE_VIDEO, PromotionType.YOUTUBE_CHANNEL ->
-                                    "Subscribe on Official YouTube ↗"
-                                PromotionType.CREATOR_PROFILE ->
-                                    "Open Official YouTube ↗"
-                            },
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp
-                        )
-                    }
-                }
-            }
-
-            // Report and Compliance
+            // Open the creator's official YouTube content directly.\n            item {\n                Button(\n                    onClick = { YouTubeUtils.openOfficialYouTube(context, promo.targetUrl) },\n                    modifier = Modifier\n                        .fillMaxWidth()\n                        .height(52.dp)\n                        .testTag("details_watch_official_btn"),\n                    colors = ButtonDefaults.buttonColors(\n                        containerColor = Color(0xFFFF0000),\n                        contentColor = Color.White\n                    ),\n                    shape = RoundedCornerShape(12.dp)\n                ) {\n                    Row(\n                        verticalAlignment = Alignment.CenterVertically,\n                        horizontalArrangement = Arrangement.spacedBy(8.dp)\n                    ) {\n                        Icon(Icons.Filled.PlayArrow, contentDescription = null)\n                        Text(\n                            text = when (promo.type) {\n                                PromotionType.YOUTUBE_VIDEO, PromotionType.YOUTUBE_CHANNEL ->\n                                    "Open Official YouTube ↗"\n                                PromotionType.CREATOR_PROFILE ->\n                                    "Open Official YouTube ↗"\n                            },\n                            fontWeight = FontWeight.Bold,\n                            fontSize = 15.sp\n                        )\n                    }\n                }\n            }\n\n            // Report and Compliance
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
