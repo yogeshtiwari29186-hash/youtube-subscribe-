@@ -395,63 +395,9 @@ class CreatorDiamondRepository(
     }
 
 
-    suspend fun grantVerifiedYouTubeSubscriptionReward(promotionId: String): OperationResult<Long> = withContext(Dispatchers.IO) {
-        val user = userDao.getUserSync(_currentUserId.value)
-            ?: return@withContext OperationResult.Error("User not found")
-        val promotion = promotionDao.getPromotionByIdSync(promotionId)
-            ?: return@withContext OperationResult.Error("Promotion not found")
-        if (promotion.type != PromotionType.YOUTUBE_VIDEO && promotion.type != PromotionType.YOUTUBE_CHANNEL) {
-            return@withContext OperationResult.Error("This promotion is not a YouTube subscription target.")
-        }
+    suspend fun grantVerifiedYouTubeSubscriptionReward(promotionId: String): OperationResult<Long> =
+        OperationResult.Error("YouTube subscription rewards are disabled. Open YouTube and subscribe only if you genuinely want to follow the creator.")
 
-        val relatedId = "youtube_subscription:$promotionId"
-        val existing = transactionDao.getTransactions(user.userId).firstOrNull()
-            ?.any { it.relatedId == relatedId && it.amount == 40L } == true
-        if (existing) {
-            return@withContext OperationResult.Error("40 💎 reward was already claimed for this creator.")
-        }
-
-        // Call this method only after an authorized YouTube subscription verifier
-        // has positively confirmed that the current user subscribed to this creator.
-        val reward = 40L
-        userDao.updateDiamonds(user.userId, user.diamonds + reward)
-        transactionDao.insertTransaction(
-            DiamondTransaction(
-                transactionId = "tx_${UUID.randomUUID().toString().take(8)}",
-                userId = user.userId,
-                amount = reward,
-                type = TransactionType.EARNED,
-                reason = "Verified YouTube subscription: ${promotion.creatorName}",
-                timestamp = System.currentTimeMillis(),
-                relatedId = relatedId,
-                status = TransactionStatus.COMPLETED
-            )
-        )
-        notificationDao.insertNotification(
-            AppNotification(
-                notificationId = "notif_${UUID.randomUUID().toString().take(8)}",
-                userId = user.userId,
-                title = "YouTube Subscription Reward 💎",
-                message = "You earned +40 💎 for a verified subscription to ${promotion.creatorName}.",
-                type = NotificationType.DIAMOND_EARNED,
-                timestamp = System.currentTimeMillis()
-            )
-        )
-        val creatorNotification = AppNotification(
-            notificationId = "notif_${UUID.randomUUID().toString().take(8)}",
-            userId = promotion.creatorId,
-            title = "New Verified Subscriber 🎉",
-            message = "${user.username} subscribed to your YouTube promotion ${promotion.title}.",
-            type = NotificationType.SYSTEM_ANNOUNCEMENT,
-            timestamp = System.currentTimeMillis()
-        )
-        notificationDao.insertNotification(creatorNotification)
-        FirebaseCloudSync.saveUser(user.copy(diamonds = user.diamonds + reward))
-        FirebaseCloudSync.saveNotification(creatorNotification)
-        FirebaseCloudSync.recordSubscription(user, promotion)
-        transactionDao.getTransactions(user.userId).firstOrNull()?.lastOrNull()?.let(FirebaseCloudSync::saveTransaction)
-        OperationResult.Success(reward)
-    }
 
     suspend fun promoteToTopList(promotionId: String): OperationResult<Unit> = withContext(Dispatchers.IO) {
         val user = userDao.getUserSync(_currentUserId.value)
